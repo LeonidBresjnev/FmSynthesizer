@@ -8,6 +8,25 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
+val generateTokenConfig = tasks.register("generateTokenConfig") {
+    val token = System.getenv("MUSICXML_TOKEN") ?: System.getenv("musicxmlToken") ?: ""
+    val outputDir = layout.buildDirectory.dir("generated/source/tokenConfig/commonMain/com/sputnik/fmsynthesizer/model")
+    outputs.dir(outputDir)
+    doLast {
+        val configFile = outputDir.get().file("DefaultTokenConfig.kt").asFile
+        configFile.parentFile.mkdirs()
+        configFile.writeText(
+            """
+            package com.sputnik.fmsynthesizer.model
+
+            object DefaultTokenConfig {
+                const val DEFAULT_TOKEN: String = "${token.trim()}"
+            }
+            """.trimIndent()
+        )
+    }
+}
+
 kotlin {
     jvm()
     
@@ -50,16 +69,19 @@ kotlin {
         jvmMain.dependencies {
             implementation("io.ktor:ktor-client-cio:3.1.1")
         }
-        commonMain.dependencies {
-            implementation(libs.compose.runtime)
-            implementation(libs.compose.foundation)
-            implementation(libs.compose.material3)
-            implementation(libs.compose.ui)
-            implementation(libs.compose.components.resources)
-            implementation(libs.compose.uiToolingPreview)
-            implementation(libs.androidx.lifecycle.viewmodelCompose)
-            implementation(libs.androidx.lifecycle.runtimeCompose)
-            implementation("io.ktor:ktor-client-core:3.1.1")
+        commonMain {
+            kotlin.srcDir(generateTokenConfig)
+            dependencies {
+                implementation(libs.compose.runtime)
+                implementation(libs.compose.foundation)
+                implementation(libs.compose.material3)
+                implementation(libs.compose.ui)
+                implementation(libs.compose.components.resources)
+                implementation(libs.compose.uiToolingPreview)
+                implementation(libs.androidx.lifecycle.viewmodelCompose)
+                implementation(libs.androidx.lifecycle.runtimeCompose)
+                implementation("io.ktor:ktor-client-core:3.1.1")
+            }
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

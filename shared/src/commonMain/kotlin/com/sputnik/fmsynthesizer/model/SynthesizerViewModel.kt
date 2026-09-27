@@ -62,7 +62,7 @@ class SynthesizerViewModel(
     // Music Library State
     private val gitHubService = GitHubMusicService()
 
-    private val _githubToken = MutableStateFlow("")
+    private val _githubToken = MutableStateFlow(DefaultTokenConfig.DEFAULT_TOKEN)
     val githubToken: StateFlow<String> = _githubToken.asStateFlow()
 
     private val _songListState = MutableStateFlow<SongListState>(SongListState.Loading)
