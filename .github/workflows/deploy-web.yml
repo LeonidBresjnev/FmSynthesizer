@@ -35,6 +35,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Make Gradlew Executable
+        run: chmod +x gradlew
+
       - name: Build Web Application
         run: ./gradlew :webApp:wasmJsBrowserDistribution :webApp:jsBrowserDistribution kotlinUpgradeYarnLock kotlinWasmUpgradeYarnLock --no-daemon
 
