@@ -1,0 +1,57 @@
+name: Deploy Web App to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build Web Application
+        run: ./gradlew :webApp:wasmJsBrowserDistribution :webApp:jsBrowserDistribution kotlinUpgradeYarnLock kotlinWasmUpgradeYarnLock --no-daemon
+
+      - name: Prepare GitHub Pages Distribution Directory
+        run: |
+          mkdir -p gh-pages-dist
+          if [ -d "webApp/build/dist/wasmJs/productionExecutable" ]; then
+            cp -r webApp/build/dist/wasmJs/productionExecutable/* gh-pages-dist/
+          elif [ -d "webApp/build/dist/js/productionExecutable" ]; then
+            cp -r webApp/build/dist/js/productionExecutable/* gh-pages-dist/
+          fi
+
+      - name: Upload GitHub Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: gh-pages-dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,43 @@
+# Gradle & Build Artifacts
+.gradle/
+.kotlin/
+**/build/
+!src/**/build/
+build/
+local.properties
+.artifacts/
+
+# Android Studio & IntelliJ IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+captures/
+
+# C++ / CMake / Native Build
+.externalNativeBuild/
+.cxx/
+cmake-build-*/
+shared/src/jvmMain/cpp/build/
+shared/src/jvmMain/cpp/vcpkg/
+shared/src/jvmMain/cpp/vcpkg_installed/
+
+# Compiled Binaries & Libraries
+*.so
+*.dll
+*.dylib
+*.lib
+*.a
+*.o
+*.obj
+*.exp
+*.pdb
+
+# Web & JS / Wasm
+node_modules/
+kotlin-js-store/
+
+# OS Specific
+.DS_Store
+Thumbs.db
