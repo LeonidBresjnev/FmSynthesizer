@@ -17,136 +17,79 @@ data class FmInstrumentPreset(
     val envelopeMode: EnvelopeMode
 )
 
-data class FmInstrumentMatchResult(
-    val preset: FmInstrumentPreset,
-    val isMatched: Boolean
-)
-
-fun getFmParametersForInstrumentWithMatchInfo(partName: String, instrumentName: String): FmInstrumentMatchResult {
+fun getFmParametersForInstrument(partName: String, instrumentName: String): FmInstrumentPreset {
     val text = "$partName $instrumentName".lowercase()
 
     return when {
-        // 1. Maracas / Rumbakugler
-        text.contains("maracas") || text.contains("rumbakugler") || text.contains("rumba-kugler") || text.contains("maraca") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(1, 2), 12.0f, EnvelopeMode.DRUM), true)
-        }
-
-        // 2. Shaker / Ryster / Cabasa
-        text.contains("shaker") || text.contains("ryster") || text.contains("cabasa") || text.contains("shekere") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(1, 2), 15.0f, EnvelopeMode.DRUM), true)
-        }
-
-        // 3. Tambourine / Tamburin
-        text.contains("tambourine") || text.contains("tamburin") || text.contains("tamborine") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(1, 2), 14.0f, EnvelopeMode.DRUM), true)
-        }
-
-        // 4. Claves / Træpinde
-        text.contains("claves") || text.contains("klaves") || text.contains("træpinde") || text.contains("rytmepinde") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(1, 2), 5.0f, EnvelopeMode.PERCUSSIVE), true)
-        }
-
-        // 5. Wood block / Træblok / Trætromme
-        text.contains("wood block") || text.contains("woodblock") || text.contains("træblok") ||
-                text.contains("wood drum") || text.contains("trætromme") || text.contains("træ tromme") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(16, 11), 5.0f, EnvelopeMode.PERCUSSIVE), true)
-        }
-
-        // 6. Cowbell / Koklokke
-        text.contains("cowbell") || text.contains("cow bell") || text.contains("koklokke") || text.contains("ko-klokke") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(16, 11), 8.0f, EnvelopeMode.PERCUSSIVE), true)
-        }
-
-        // 7. Gong / Gonggong / Tam-tam
-        text.contains("gong") || text.contains("gonggong") || text.contains("tam-tam") || text.contains("tamtam") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(16, 11), 14.0f, EnvelopeMode.FADE), true)
-        }
-
-        // 8. Cymbal / Bækken / Hi-hat / Crash / Ride
-        text.contains("cymbal") || text.contains("cymbals") || text.contains("bækken") || text.contains("bækkener") ||
-                text.contains("crash") || text.contains("ride") || text.contains("hi-hat") || text.contains("hihat") ||
-                text.contains("splash") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(16, 11), 20.0f, EnvelopeMode.DRUM), true)
-        }
-
-        // 9. Bell / Klokke / Glockenspiel / Vibraphone / Celesta / Triangel
-        text.contains("bell") || text.contains("klokke") || text.contains("klokkespil") || text.contains("rørklokke") ||
-                text.contains("kirkeklokke") || text.contains("chime") || text.contains("glockenspiel") ||
-                text.contains("vibraphone") || text.contains("vibes") || text.contains("celesta") ||
-                text.contains("marimba") || text.contains("carillon") || text.contains("campana") ||
-                text.contains("triangle") || text.contains("triangel") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(16, 11), 8.0f, EnvelopeMode.PERCUSSIVE), true)
-        }
-
-        // 10. General Drums / Percussion / Trommer
-        text.contains("drum") || text.contains("tromme") || text.contains("lilletromme") ||
-                text.contains("stortromme") || text.contains("slagtøj") || text.contains("percussion") ||
-                text.contains("perkussion") || text.contains("snare") || text.contains("tom") ||
+        // Wood Drum / Drums / Percussion
+        text.contains("wood drum") || text.contains("woodblock") || text.contains("træblok") ||
+                text.contains("drum") || text.contains("tromme") || text.contains("percussion") ||
+                text.contains("slagtøj") || text.contains("snare") || text.contains("tom") ||
                 text.contains("conga") || text.contains("bongo") || text.contains("pauke") ||
                 text.contains("timpani") || text.contains("cajon") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(16, 11), 15.0f, EnvelopeMode.DRUM), true)
+            FmInstrumentPreset(Pair(16, 11), 15.0f, EnvelopeMode.DRUM)
         }
 
-        // 11. Organ / Orgel / Harmonium
-        text.contains("organ") || text.contains("orgel") || text.contains("kirkeorgel") ||
-                text.contains("pibeorgel") || text.contains("trædeorgel") || text.contains("hammond") ||
+        // Bell / Chimes / Glockenspiel / Vibraphone / Celesta
+        text.contains("bell") || text.contains("klokke") || text.contains("chime") ||
+                text.contains("glockenspiel") || text.contains("vibraphone") || text.contains("vibes") ||
+                text.contains("celesta") || text.contains("marimba") || text.contains("carillon") ||
+                text.contains("triangle") || text.contains("triangel") -> {
+            FmInstrumentPreset(Pair(16, 11), 6.0f, EnvelopeMode.PERCUSSIVE)
+        }
+
+        // Organ / Harmonium / Accordion
+        text.contains("organ") || text.contains("orgel") || text.contains("hammond") ||
                 text.contains("harmonium") || text.contains("accordion") || text.contains("harmonika") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(1, 3), 1.0f, EnvelopeMode.ORGAN), true)
+            FmInstrumentPreset(Pair(1, 3), 1.0f, EnvelopeMode.ORGAN)
         }
 
-        // 12. Flute / Fløjte / Piccolo
-        text.contains("flute") || text.contains("fløjte") || text.contains("tværfløjte") ||
-                text.contains("pikkolofløjte") || text.contains("blokfløjte") || text.contains("pibe") ||
-                text.contains("flote") || text.contains("floete") || text.contains("piccolo") ||
-                text.contains("pikkolo") || text.contains("recorder") || text.contains("whistle") ||
+        // Flute / Piccolo / Recorder
+        text.contains("flute") || text.contains("fløjte") || text.contains("flote") ||
+                text.contains("floete") || text.contains("piccolo") || text.contains("pikkolo") ||
+                text.contains("recorder") || text.contains("blokfløjte") || text.contains("whistle") ||
                 text.contains("fife") || text.contains("pan flute") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(1, 1), 0.8f, EnvelopeMode.AR), true)
+            FmInstrumentPreset(Pair(1, 1), 0.8f, EnvelopeMode.AR)
         }
 
-        // 13. Bassoon / Fagot / Oboe
-        text.contains("bassoon") || text.contains("fagot") || text.contains("kontrafagot") ||
-                text.contains("fagotto") || text.contains("oboe") || text.contains("obo") ||
-                text.contains("hautbois") || text.contains("english horn") || text.contains("engelsk horn") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(1, 5), 1.0f, EnvelopeMode.ADSR), true)
+        // Bassoon / Oboe / English Horn
+        text.contains("bassoon") || text.contains("fagot") || text.contains("fagotto") ||
+                text.contains("oboe") || text.contains("obo") || text.contains("hautbois") ||
+                text.contains("english horn") || text.contains("engelsk horn") -> {
+            FmInstrumentPreset(Pair(1, 5), 1.0f, EnvelopeMode.ADSR)
         }
 
-        // 14. Clarinet / Saxophone / Klarinet / Saxofon
+        // Clarinet / Saxophone
         text.contains("clarinet") || text.contains("klarinet") || text.contains("basset") ||
-                text.contains("sax") || text.contains("saxofon") || text.contains("altsax") ||
-                text.contains("tenorsax") || text.contains("barytonsax") || text.contains("sopransax") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(2, 3), 3.0f, EnvelopeMode.PLUCK), true)
+                text.contains("sax") || text.contains("saxophone") -> {
+            FmInstrumentPreset(Pair(2, 3), 3.0f, EnvelopeMode.PLUCK)
         }
 
-        // 15. French Horn / Valdhorn
+        // French Horn
         text.contains("french horn") || text.contains("horn i f") || text.contains("horn in f") ||
-                text.contains("valdhorn") || text.contains("waldhorn") || text.contains("corno") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(1, 1), 2.5f, EnvelopeMode.PAD), true)
+                text.contains("corno") || text.contains("waldhorn") -> {
+            FmInstrumentPreset(Pair(1, 1), 2.5f, EnvelopeMode.PAD)
         }
 
-        // 16. Trombone / Basun
-        text.contains("trombone") || text.contains("basun") || text.contains("tenorbasun") ||
-                text.contains("basbasun") || text.contains("posaune") || text.contains("trb") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(1, 1), 3.5f, EnvelopeMode.ADSR), true)
+        // Trombone
+        text.contains("trombone") || text.contains("basun") || text.contains("posaune") ||
+                text.contains("trb") -> {
+            FmInstrumentPreset(Pair(1, 1), 3.5f, EnvelopeMode.ADSR)
         }
 
-        // 17. Trumpet / Brass Section / Trompet
+        // Trumpet / Brass Section / Tuba / Cornet
         text.contains("trumpet") || text.contains("trompet") || text.contains("brass") ||
-                text.contains("messingblæser") || text.contains("messing") || text.contains("kornet") ||
-                text.contains("cornet") || text.contains("bugle") || text.contains("flugelhorn") ||
-                text.contains("flygelhorn") || text.contains("tuba") || text.contains("euphonium") ||
+                text.contains("kornet") || text.contains("cornet") || text.contains("bugle") ||
+                text.contains("flugelhorn") || text.contains("tuba") || text.contains("euphonium") ||
                 text.contains("barytonhorn") || text.contains("baritone horn") || text.contains("sousaphone") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(1, 1), 5.0f, EnvelopeMode.ADSR), true)
+            FmInstrumentPreset(Pair(1, 1), 5.0f, EnvelopeMode.ADSR)
         }
 
         // Unmatched fallback -> Default (index = 1, ratio = 1/1)
         else -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(1, 1), 1.0f, EnvelopeMode.ADSR), false)
+            FmInstrumentPreset(Pair(1, 1), 1.0f, EnvelopeMode.ADSR)
         }
     }
-}
-
-fun getFmParametersForInstrument(partName: String, instrumentName: String): FmInstrumentPreset {
-    return getFmParametersForInstrumentWithMatchInfo(partName, instrumentName).preset
 }
 
 class SynthesizerViewModel(
@@ -356,18 +299,10 @@ class SynthesizerViewModel(
                     _currentParsedSong.value = parsedSong
                     _downloadState.value = SongDownloadState.Success(parsedSong)
 
-                    val unmatchedInstruments = mutableListOf<String>()
-
-                    // Automatically apply table FM parameters per instrument part
+                    // Match each part against instrument table
                     parsedSong.metadata.parts.forEachIndexed { index, part ->
                         val voiceIdx = index.coerceIn(0, 49)
-                        val matchResult = getFmParametersForInstrumentWithMatchInfo(part.name, part.instrumentName)
-                        val preset = matchResult.preset
-
-                        if (!matchResult.isMatched) {
-                            unmatchedInstruments.add("'${part.name}' (instrument: '${part.instrumentName}')")
-                        }
-
+                        val preset = getFmParametersForInstrument(part.name, part.instrumentName)
                         instrumentCm[voiceIdx] = preset.cmRatio
                         instrumentModIndex[voiceIdx] = preset.modulationIndex
                         instrumentEnvelopeMode[voiceIdx] = preset.envelopeMode
@@ -377,12 +312,6 @@ class SynthesizerViewModel(
                         synthesizer.setEnvelopeMode(preset.envelopeMode.ordinal, voiceIdx)
                     }
 
-                    if (unmatchedInstruments.isNotEmpty()) {
-                        println("[FmSynthesizer] Unmatched instruments defaulting to ratio=1/1, index=1.0, ADSR:")
-                        unmatchedInstruments.forEach { println("   - $it") }
-                    }
-
-                    // Update UI state for currently selected instrument
                     val currentSelected = _selectedInstrumentIndex.value
                     _cmRatio.value = instrumentCm[currentSelected]
                     _index.value = instrumentModIndex[currentSelected]
