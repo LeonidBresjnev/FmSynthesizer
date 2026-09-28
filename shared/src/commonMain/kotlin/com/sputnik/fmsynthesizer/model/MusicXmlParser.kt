@@ -328,11 +328,17 @@ class MusicXmlParser {
                             }
 
                             val pitchNodes = childElem.getElementsByTagName("pitch")
+                            val unpitchedNodes = childElem.getElementsByTagName("unpitched")
+
                             if (pitchNodes.isNotEmpty()) {
                                 val pElem = pitchNodes[0]
                                 step = pElem.getElementsByTagName("step").firstOrNull()?.textContent?.trim() ?: ""
                                 octave = pElem.getElementsByTagName("octave").firstOrNull()?.textContent?.trim()?.toIntOrNull() ?: 4
                                 alter = pElem.getElementsByTagName("alter").firstOrNull()?.textContent?.trim()?.toIntOrNull() ?: 0
+                            } else if (unpitchedNodes.isNotEmpty()) {
+                                val uElem = unpitchedNodes[0]
+                                step = uElem.getElementsByTagName("display-step").firstOrNull()?.textContent?.trim() ?: "C"
+                                octave = uElem.getElementsByTagName("display-octave").firstOrNull()?.textContent?.trim()?.toIntOrNull() ?: 2
                             }
 
                             val durNodes = childElem.getElementsByTagName("duration")

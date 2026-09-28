@@ -22,6 +22,17 @@ data class FmInstrumentMatchResult(
     val isMatched: Boolean
 )
 
+fun adjustFrequencyForUnpitchedPercussion(freq: Float, envelopeMode: EnvelopeMode): Float {
+    val isPercussion = envelopeMode == EnvelopeMode.DRUM || envelopeMode == EnvelopeMode.PERCUSSIVE
+    if (!isPercussion || freq <= 1.0f) return freq
+
+    var adjusted = freq
+    while (adjusted > 180f) {
+        adjusted /= 2f
+    }
+    return adjusted.coerceAtLeast(60f)
+}
+
 fun getFmParametersForInstrumentWithMatchInfo(partName: String, instrumentName: String): FmInstrumentMatchResult {
     val text = "$partName $instrumentName".lowercase()
 
@@ -434,8 +445,11 @@ class SynthesizerViewModel(
                 for (note in noteGroup) {
                     val voiceIndex = partIdToVoiceMap[note.partId] ?: 0
                     val durationSec = (note.duration.toFloat() / 1000f).coerceAtLeast(0.05f)
+                    val envMode = instrumentEnvelopeMode[voiceIndex]
+                    val playbackFreq = adjustFrequencyForUnpitchedPercussion(note.frequency, envMode)
+
                     launch {
-                        synthesizer.setFrequency(note.frequency, voiceIndex, durationSec)
+                        synthesizer.setFrequency(playbackFreq, voiceIndex, durationSec)
                     }
                 }
             }
