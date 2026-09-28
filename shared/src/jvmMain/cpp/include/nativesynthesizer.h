@@ -6,6 +6,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <array>
 #include <map>
+#include <atomic>
 #include <cstdint>
 
 #define LOGD(msg) std::cout << "[NativeSynthesizer] " << msg << std::endl
@@ -36,19 +37,19 @@ namespace synthesizer {
     };
 
     struct Voice {
-        bool playnote{false};
-        double targetFrequency{440.0};
+        std::atomic<bool> playnote{false};
+        std::atomic<double> targetFrequency{440.0};
         double currentF0{440.0};
-        double glideStep{0.0};
+        std::atomic<double> glideStep{0.0};
 
-        int carrier{1};
-        int modulator{1};
-        double modulationIndex{1.0};
+        std::atomic<int> carrier{1};
+        std::atomic<int> modulator{1};
+        std::atomic<double> modulationIndex{1.0};
         double mModDecayScale{1.0};
 
-        int carrier2{1};
-        int modulator2{1};
-        double modulationIndex2{0.0};
+        std::atomic<int> carrier2{1};
+        std::atomic<int> modulator2{1};
+        std::atomic<double> modulationIndex2{0.0};
 
         double fc{440.0};
         double fm{440.0};
@@ -61,19 +62,19 @@ namespace synthesizer {
         double innerindex{0.0};
         double m0{0.0};
 
-        float amplitude{0.1f};
+        std::atomic<float> amplitude{0.063f};
 
         // Envelope state
         EnvelopeState envelopeState{EnvelopeState::Idle};
         double envelopeValue{0.0};
         uint64_t sampleCounter{0};
-        uint64_t noteOffCounter{UINT64_MAX};
+        std::atomic<uint64_t> noteOffCounter{UINT64_MAX};
 
-        int envelopeMode{0}; // ADSR default
-        double attackStep{0.001};
-        double decayStep{0.001};
-        double sustainLevel{0.7};
-        double releaseStep{0.001};
+        std::atomic<int> envelopeMode{0}; // ADSR default
+        std::atomic<double> attackStep{0.001};
+        std::atomic<double> decayStep{0.001};
+        std::atomic<double> sustainLevel{0.7};
+        std::atomic<double> releaseStep{0.001};
     };
 
     class NativeSynthesizer : public juce::AudioSource {
