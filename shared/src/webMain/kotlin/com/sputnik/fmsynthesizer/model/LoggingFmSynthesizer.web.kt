@@ -8,6 +8,7 @@ import kotlin.js.ExperimentalWasmJsInterop
 import kotlin.js.JsAny
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.pow
 import kotlin.math.sin
 
 @OptIn(ExperimentalWasmJsInterop::class)
@@ -51,6 +52,7 @@ private class WebVoice {
     var carrier: Int = 1
     var modulator: Int = 1
     var modulationIndex: Double = 1.0
+    var mModDecayScale: Double = 1.0
 
     var carrier2: Int = 1
     var modulator2: Int = 1
@@ -104,6 +106,7 @@ actual class LoggingFmSynthesizer actual constructor(
 
     private var currentSampleRate: Double = 48000.0
     private var sampleTimeStep: Double = 1.0 / 48000.0
+    private var modDecayFactorPerSample: Double = 1.0
 
     private val voices = List(50) { WebVoice() }
 
@@ -141,6 +144,7 @@ actual class LoggingFmSynthesizer actual constructor(
                 audioContext = ctx
                 currentSampleRate = ctx.sampleRate
                 sampleTimeStep = 1.0 / currentSampleRate
+                modDecayFactorPerSample = 0.5.pow(1.0 / (0.5 * currentSampleRate))
 
                 for (v in voices) {
                     v.setEnvelopeMode(0, currentSampleRate)
@@ -201,9 +205,16 @@ actual class LoggingFmSynthesizer actual constructor(
                             if (v.playnote) {
                                 v.sampleCounter += 1.0
 
-                                val index = ((v.fm * (v.tau + sampleTimeStep)) % 1.0 + 1.0) % 1.0
+                                val effectiveModIdx = v.modulationIndex * v.mModDecayScale
+                                v.mModDecayScale *= modDecayFactorPerSample
+
+                                val fcVal = v.targetFrequency * v.carrier
+                                val fmVal = v.targetFrequency * v.modulator
+                                val amVal = effectiveModIdx * fmVal
+
+                                val index = ((fmVal * (v.tau + sampleTimeStep)) % 1.0 + 1.0) % 1.0
                                 val newintegrand = coSine(index).toDouble()
-                                v.integral = ((1.0 + v.integral + sampleTimeStep * (v.fc + v.am * (v.integrand + newintegrand) / 2.0)) % 1.0 + 1.0) % 1.0
+                                v.integral = ((1.0 + v.integral + sampleTimeStep * (fcVal + amVal * (v.integrand + newintegrand) / 2.0)) % 1.0 + 1.0) % 1.0
 
                                 v.integrand = newintegrand
                                 v.tau += sampleTimeStep
@@ -241,6 +252,7 @@ actual class LoggingFmSynthesizer actual constructor(
             v.sampleCounter = 0.0
             v.envelopeState = WebEnvelopeState.Attack
             v.envelopeValue = 0.0
+            v.mModDecayScale = 1.0
             v.playnote = true
         }
     }
@@ -271,6 +283,8 @@ actual class LoggingFmSynthesizer actual constructor(
                 v.sampleCounter = 0.0
                 v.envelopeState = WebEnvelopeState.Attack
                 v.envelopeValue = 0.0
+                v.mModDecayScale = 1.0
+
                 if (durationSeconds > 0.0f) {
                     v.noteOffCounter = durationSeconds * currentSampleRate
                 } else {

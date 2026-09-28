@@ -68,6 +68,7 @@ kotlin {
         }
         jvmMain.dependencies {
             implementation("io.ktor:ktor-client-cio:3.1.1")
+            runtimeOnly("ch.qos.logback:logback-classic:1.6.4")
         }
         commonMain {
             kotlin.srcDir(generateTokenConfig)

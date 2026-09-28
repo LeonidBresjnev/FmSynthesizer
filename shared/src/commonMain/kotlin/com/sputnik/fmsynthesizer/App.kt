@@ -48,6 +48,7 @@ import com.sputnik.fmsynthesizer.model.EnvelopeMode
 import com.sputnik.fmsynthesizer.model.SongDownloadState
 import com.sputnik.fmsynthesizer.model.SongListState
 import com.sputnik.fmsynthesizer.model.SynthesizerViewModel
+import com.sputnik.fmsynthesizer.ui.EnvelopePlot
 
 @Composable
 fun WheelPicker(
@@ -372,7 +373,29 @@ fun EnvelopeTab(viewModel: SynthesizerViewModel) {
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .height(220.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
+            ) {
+                EnvelopePlot(
+                    attack = attack,
+                    decay = decay,
+                    sustain = sustain,
+                    release = release,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         Text(text = "Attack: ${((attack * 1000).toInt())} ms")
         Slider(
