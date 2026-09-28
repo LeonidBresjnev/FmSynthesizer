@@ -108,12 +108,12 @@ fun getFmParametersForInstrumentWithMatchInfo(partName: String, instrumentName: 
             FmInstrumentMatchResult(FmInstrumentPreset(Pair(1, 1), 2.5f, EnvelopeMode.PAD), true)
         }
 
-        // 14. Clarinet / Saxophone / Klarinet / Saxofon: c:m = 2:3, I = 3.0, PLUCK
+        // 14. Clarinet / Saxophone / Klarinet / Saxofon: c:m = 2:3, I = 3.0, ORGAN
         text.contains("clarinet") || text.contains("klarinet") || text.contains("basset") ||
                 text.contains("sax") || text.contains("saxofon") || text.contains("altsax") ||
                 text.contains("tenorsax") || text.contains("barytonsax") || text.contains("sopransax") ||
                 text.contains("alto sax") || text.contains("tenor sax") || text.contains("baritone sax") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(2, 3), 3.0f, EnvelopeMode.PLUCK), true)
+            FmInstrumentMatchResult(FmInstrumentPreset(Pair(2, 3), 3.0f, EnvelopeMode.ORGAN), true)
         }
 
         // 15. Bassoon / Oboe / Fagot / Obo / Engelsk horn: c:m = 1:5, I = 1.0, ADSR
