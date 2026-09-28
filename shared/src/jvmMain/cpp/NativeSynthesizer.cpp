@@ -7,7 +7,6 @@ namespace synthesizer {
     NativeSynthesizer::NativeSynthesizer() {
         LOGD("Initializing JUCE AudioDeviceManager...");
 
-        // Initialise audio device manager with 0 inputs and 2 outputs (stereo)
         juce::AudioDeviceManager::AudioDeviceSetup setup;
         deviceManager.getAudioDeviceSetup(setup);
         setup.sampleRate = 48000.0;
@@ -24,6 +23,10 @@ namespace synthesizer {
             sineArray[i] = std::sin(static_cast<double>(i) * 2.0 * PI / 512);
             coSineArray[i] = std::cos(static_cast<double>(i) * 2.0 * PI / 512);
         }
+
+        currentSampleRate = 48000.0;
+        T = 1.0 / currentSampleRate;
+        mModDecayFactorPerSample = std::pow(0.5, 1.0 / (0.5 * currentSampleRate));
 
         for (int v = 0; v < MAX_VOICES; ++v) {
             voices[v].amplitude = 0.063f; // -24dB default
@@ -42,6 +45,8 @@ namespace synthesizer {
         LOGD("prepareToPlay called: sampleRate=" << sampleRate << ", blockSize=" << samplesPerBlockExpected);
         currentSampleRate = (sampleRate > 0) ? sampleRate : 48000.0;
         T = 1.0 / currentSampleRate;
+        mModDecayFactorPerSample = std::pow(0.5, 1.0 / (0.5 * currentSampleRate));
+
         for (int v = 0; v < MAX_VOICES; ++v) {
             voices[v].innerindex = 0.0;
             voices[v].integral = 0.0;
@@ -51,6 +56,7 @@ namespace synthesizer {
             voices[v].envelopeValue = 0.0;
             voices[v].sampleCounter = 0;
             voices[v].noteOffCounter = UINT64_MAX;
+            voices[v].mModDecayScale = 1.0;
         }
     }
 
@@ -118,9 +124,16 @@ namespace synthesizer {
                 if (voice.playnote) {
                     voice.sampleCounter++;
 
-                    const double index = std::fmod(voice.fm * (voice.tau + T), 1.0);
+                    double effectiveModIdx = voice.modulationIndex * voice.mModDecayScale;
+                    voice.mModDecayScale *= mModDecayFactorPerSample;
+
+                    double fcVal = voice.targetFrequency * voice.carrier;
+                    double fmVal = voice.targetFrequency * voice.modulator;
+                    double amVal = effectiveModIdx * fmVal;
+
+                    const double index = std::fmod(fmVal * (voice.tau + T), 1.0);
                     const double newintegrand = coSine(index);
-                    voice.integral = std::fmod(1.0 + voice.integral + T * (voice.fc + voice.am * (voice.integrand + newintegrand) / 2.0), 1.0);
+                    voice.integral = std::fmod(1.0 + voice.integral + T * (fcVal + amVal * (voice.integrand + newintegrand) / 2.0), 1.0);
 
                     voice.integrand = newintegrand;
                     voice.tau += T;
@@ -147,6 +160,7 @@ namespace synthesizer {
             v.sampleCounter = 0;
             v.envelopeState = EnvelopeState::Attack;
             v.envelopeValue = 0.0;
+            v.mModDecayScale = 1.0;
             v.playnote = true;
         }
     }
@@ -176,6 +190,7 @@ namespace synthesizer {
                 v.sampleCounter = 0;
                 v.envelopeState = EnvelopeState::Attack;
                 v.envelopeValue = 0.0;
+                v.mModDecayScale = 1.0;
 
                 if (durationSeconds > 0.0) {
                     v.noteOffCounter = static_cast<uint64_t>(durationSeconds * currentSampleRate);
