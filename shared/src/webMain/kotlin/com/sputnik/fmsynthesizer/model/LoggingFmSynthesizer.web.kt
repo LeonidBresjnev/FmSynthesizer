@@ -151,7 +151,7 @@ actual class LoggingFmSynthesizer actual constructor(
                     v.updateParms()
                 }
 
-                val node = ctx.createScriptProcessor(4096, 0, 1)
+                val node = ctx.createScriptProcessor(1024, 0, 1)
                 node.onaudioprocess = { event: AudioProcessingEvent ->
                     val outputData = event.outputBuffer.getChannelData(0)
                     val bufferSize = outputData.length
@@ -250,8 +250,10 @@ actual class LoggingFmSynthesizer actual constructor(
         if (instrumentIndex in 0..49) {
             val v = voices[instrumentIndex]
             v.sampleCounter = 0.0
-            v.envelopeState = WebEnvelopeState.Attack
-            v.envelopeValue = 0.0
+            if (v.envelopeState == WebEnvelopeState.Idle || !v.playnote) {
+                v.envelopeValue = 0.0
+                v.envelopeState = WebEnvelopeState.Attack
+            }
             v.mModDecayScale = 1.0
             v.playnote = true
         }
@@ -281,9 +283,14 @@ actual class LoggingFmSynthesizer actual constructor(
             if (frequencyInHz > 1.0f) {
                 v.targetFrequency = frequencyInHz.toDouble()
                 v.sampleCounter = 0.0
-                v.envelopeState = WebEnvelopeState.Attack
-                v.envelopeValue = 0.0
                 v.mModDecayScale = 1.0
+
+                if (v.envelopeState == WebEnvelopeState.Idle || !v.playnote) {
+                    v.envelopeValue = 0.0
+                    v.envelopeState = WebEnvelopeState.Attack
+                } else if (v.envelopeState == WebEnvelopeState.Release) {
+                    v.envelopeState = WebEnvelopeState.Sustain
+                }
 
                 if (durationSeconds > 0.0f) {
                     v.noteOffCounter = durationSeconds * currentSampleRate
