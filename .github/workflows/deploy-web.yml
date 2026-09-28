@@ -41,7 +41,7 @@ jobs:
       - name: Build Web Application
         env:
           MUSICXML_TOKEN: ${{ secrets.musicxmlToken }}
-        run: ./gradlew :webApp:wasmJsBrowserDistribution :webApp:jsBrowserDistribution kotlinUpgradeYarnLock kotlinWasmUpgradeYarnLock --no-daemon
+        run: ./gradlew kotlinUpgradeYarnLock kotlinWasmUpgradeYarnLock :webApp:wasmJsBrowserDistribution :webApp:jsBrowserDistribution --no-daemon
 
       - name: Prepare GitHub Pages Distribution Directory
         run: |
