@@ -445,7 +445,8 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
     val githubToken by viewModel.githubToken.collectAsStateWithLifecycle()
 
-    var tokenInput by remember(githubToken) { mutableStateOf(githubToken) }
+    var tokenInput by remember { mutableStateOf("") }
+    val isTokenConfigured = githubToken.isNotBlank()
 
     Column(
         modifier = Modifier
@@ -485,15 +486,29 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
             OutlinedTextField(
                 value = tokenInput,
                 onValueChange = { tokenInput = it },
-                label = { Text("GitHub Personal Access Token") },
+                label = {
+                    Text(
+                        if (isTokenConfigured) "GitHub Token (Configured & Protected)" else "GitHub Personal Access Token"
+                    )
+                },
+                placeholder = {
+                    if (isTokenConfigured) {
+                        Text("Token active and protected. Enter new token to override.")
+                    }
+                },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.weight(1f)
             )
             Button(
-                onClick = { viewModel.setGithubToken(tokenInput) }
+                onClick = {
+                    if (tokenInput.isNotBlank()) {
+                        viewModel.setGithubToken(tokenInput)
+                        tokenInput = ""
+                    }
+                }
             ) {
-                Text("Save Token")
+                Text(if (isTokenConfigured && tokenInput.isBlank()) "Token Saved" else "Save Token")
             }
         }
 
