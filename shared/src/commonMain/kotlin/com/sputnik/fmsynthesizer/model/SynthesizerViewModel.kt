@@ -209,6 +209,14 @@ class SynthesizerViewModel(
     private val instrumentModIndex = FloatArray(50) { 1.0f }
     private val instrumentEnvelopeMode = Array(50) { EnvelopeMode.ADSR }
 
+    // Instrument Enable / Solo State
+    private val instrumentEnabled = BooleanArray(50) { true }
+    private val _soloInstrumentIndex = MutableStateFlow<Int?>(null)
+    val soloInstrumentIndex: StateFlow<Int?> = _soloInstrumentIndex.asStateFlow()
+
+    private val _instrumentStateVersion = MutableStateFlow(0)
+    val instrumentStateVersion: StateFlow<Int> = _instrumentStateVersion.asStateFlow()
+
     // Music Library State
     private val gitHubService = GitHubMusicService()
 
@@ -237,6 +245,47 @@ class SynthesizerViewModel(
             synthesizer.setCMRatio2(_cmRatio2.value)
         }
         fetchRemoteSongs()
+    }
+
+    fun toggleInstrumentEnabled(index: Int) {
+        val safeIdx = index.coerceIn(0, 49)
+        _soloInstrumentIndex.value = null
+        instrumentEnabled[safeIdx] = !instrumentEnabled[safeIdx]
+        _instrumentStateVersion.value++
+    }
+
+    fun toggleSoloInstrument(index: Int) {
+        val safeIdx = index.coerceIn(0, 49)
+        if (_soloInstrumentIndex.value == safeIdx) {
+            _soloInstrumentIndex.value = null
+            for (i in 0..49) instrumentEnabled[i] = true
+        } else {
+            _soloInstrumentIndex.value = safeIdx
+            for (i in 0..49) {
+                instrumentEnabled[i] = (i == safeIdx)
+            }
+        }
+        _instrumentStateVersion.value++
+    }
+
+    fun isInstrumentEnabled(index: Int): Boolean {
+        val safeIdx = index.coerceIn(0, 49)
+        return instrumentEnabled[safeIdx]
+    }
+
+    fun getInstrumentCm(index: Int): Pair<Int, Int> {
+        val safeIdx = index.coerceIn(0, 49)
+        return instrumentCm[safeIdx]
+    }
+
+    fun getInstrumentModIndex(index: Int): Float {
+        val safeIdx = index.coerceIn(0, 49)
+        return instrumentModIndex[safeIdx]
+    }
+
+    fun getInstrumentEnvelopeMode(index: Int): EnvelopeMode {
+        val safeIdx = index.coerceIn(0, 49)
+        return instrumentEnvelopeMode[safeIdx]
     }
 
     fun togglePlayStop() {
@@ -360,6 +409,9 @@ class SynthesizerViewModel(
     fun selectAndDownloadSong(songItem: RemoteSongItem) {
         stopSong()
         _selectedSongItem.value = songItem
+        _soloInstrumentIndex.value = null
+        for (i in 0..49) instrumentEnabled[i] = true
+
         viewModelScope.launch {
             _downloadState.value = SongDownloadState.Downloading
             val result = gitHubService.downloadSongInMemory(songItem.downloadUrl, songItem.name, _githubToken.value)
@@ -399,6 +451,7 @@ class SynthesizerViewModel(
                     _cmRatio.value = instrumentCm[currentSelected]
                     _index.value = instrumentModIndex[currentSelected]
                     _envelopeMode.value = instrumentEnvelopeMode[currentSelected]
+                    _instrumentStateVersion.value++
                 },
                 onFailure = { error ->
                     _downloadState.value = SongDownloadState.Error(error.message ?: "Failed to download song")
@@ -444,6 +497,9 @@ class SynthesizerViewModel(
 
                 for (note in noteGroup) {
                     val voiceIndex = partIdToVoiceMap[note.partId] ?: 0
+
+                    if (!instrumentEnabled[voiceIndex]) continue
+
                     val durationSec = (note.duration.toFloat() / 1000f).coerceAtLeast(0.05f)
                     val envMode = instrumentEnvelopeMode[voiceIndex]
                     val playbackFreq = adjustFrequencyForUnpitchedPercussion(note.frequency, envMode)

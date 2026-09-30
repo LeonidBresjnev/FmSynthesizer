@@ -23,8 +23,12 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -444,6 +448,8 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
     val downloadState by viewModel.downloadState.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
     val githubToken by viewModel.githubToken.collectAsStateWithLifecycle()
+    val soloIndex by viewModel.soloInstrumentIndex.collectAsStateWithLifecycle()
+    val stateVersion by viewModel.instrumentStateVersion.collectAsStateWithLifecycle()
 
     var tokenInput by remember { mutableStateOf("") }
     val isTokenConfigured = githubToken.isNotBlank()
@@ -633,6 +639,86 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
                                 }
                             ) {
                                 Text(if (isPlaying) "Stop Song" else "Play Song")
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = "Instruments in Song (${meta.parts.size}):",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        meta.parts.forEachIndexed { index, part ->
+                            val isEnabled = viewModel.isInstrumentEnabled(index)
+                            val isSoloed = soloIndex == index
+                            val cm = viewModel.getInstrumentCm(index)
+                            val modIdx = viewModel.getInstrumentModIndex(index)
+                            val envMode = viewModel.getInstrumentEnvelopeMode(index)
+
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSoloed) MaterialTheme.colorScheme.tertiaryContainer
+                                    else if (isEnabled) MaterialTheme.colorScheme.surfaceVariant
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "${part.id}: ${part.name.ifBlank { "Part ${index + 1}" }}",
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.titleSmall
+                                        )
+                                        if (part.instrumentName.isNotBlank() && part.instrumentName != part.name) {
+                                            Text(
+                                                text = "Instrument: ${part.instrumentName}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Badge { Text("c:m = ${cm.first}:${cm.second}") }
+                                            Badge { Text("I = $modIdx") }
+                                            Badge { Text("Mode = ${envMode.label}") }
+                                        }
+                                    }
+
+                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Button(
+                                            onClick = { viewModel.toggleInstrumentEnabled(index) },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                                            ),
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(if (isEnabled) "ON" else "OFF", style = MaterialTheme.typography.labelSmall)
+                                        }
+
+                                        Button(
+                                            onClick = { viewModel.toggleSoloInstrument(index) },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = if (isSoloed) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.surfaceTint
+                                            ),
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("SOLO", style = MaterialTheme.typography.labelSmall)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
