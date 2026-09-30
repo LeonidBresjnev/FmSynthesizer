@@ -14,7 +14,8 @@ import kotlin.math.abs
 data class FmInstrumentPreset(
     val cmRatio: Pair<Int, Int>,
     val modulationIndex: Float,
-    val envelopeMode: EnvelopeMode
+    val envelopeMode: EnvelopeMode,
+    val overrideFrequencyHz: Float? = null
 )
 
 data class FmInstrumentMatchResult(
@@ -37,6 +38,17 @@ fun getFmParametersForInstrumentWithMatchInfo(partName: String, instrumentName: 
     val text = "$partName $instrumentName".lowercase()
 
     return when {
+        // Bass Drum / Stortromme / Kick Drum -> Pitched at ~50 Hz (G-tone)
+        text.contains("bass drum") || text.contains("stortromme") || text.contains("kick drum") ||
+                text.contains("bdrum") || text.contains("bas tromme") -> {
+            FmInstrumentMatchResult(FmInstrumentPreset(Pair(16, 11), 15.0f, EnvelopeMode.DRUM, overrideFrequencyHz = 50.0f), true)
+        }
+
+        // Timpani / Pauke -> Pitched deep at ~65 Hz (C-tone)
+        text.contains("timpani") || text.contains("pauke") || text.contains("pauker") || text.contains("kettledrum") -> {
+            FmInstrumentMatchResult(FmInstrumentPreset(Pair(16, 11), 12.0f, EnvelopeMode.DRUM, overrideFrequencyHz = 65.41f), true)
+        }
+
         // 1. Maracas / Rumbakugler: c:m = 1:2, I = 12.0, DRUM
         text.contains("maracas") || text.contains("rumbakugler") || text.contains("rumba-kugler") || text.contains("maraca") -> {
             FmInstrumentMatchResult(FmInstrumentPreset(Pair(1, 2), 12.0f, EnvelopeMode.DRUM), true)
@@ -89,12 +101,11 @@ fun getFmParametersForInstrumentWithMatchInfo(partName: String, instrumentName: 
             FmInstrumentMatchResult(FmInstrumentPreset(Pair(16, 11), 8.0f, EnvelopeMode.PERCUSSIVE), true)
         }
 
-        // 10. Drums / Percussion / Tromme / Lilletromme / Stortromme / Slagtøj / Perkussion: c:m = 16:11 (1.45), I = 15.0, DRUM
+        // 10. Drums / Percussion / Tromme / Lilletromme / Slagtøj / Perkussion: c:m = 16:11 (1.45), I = 15.0, DRUM
         text.contains("drum") || text.contains("tromme") || text.contains("lilletromme") ||
-                text.contains("stortromme") || text.contains("slagtøj") || text.contains("percussion") ||
-                text.contains("perkussion") || text.contains("snare") || text.contains("tom") ||
-                text.contains("conga") || text.contains("bongo") || text.contains("pauke") ||
-                text.contains("timpani") || text.contains("cajon") -> {
+                text.contains("slagtøj") || text.contains("percussion") || text.contains("perkussion") ||
+                text.contains("snare") || text.contains("tom") || text.contains("conga") ||
+                text.contains("bongo") || text.contains("cajon") -> {
             FmInstrumentMatchResult(FmInstrumentPreset(Pair(16, 11), 15.0f, EnvelopeMode.DRUM), true)
         }
 
@@ -208,6 +219,7 @@ class SynthesizerViewModel(
     private val instrumentCm = Array(50) { Pair(1, 1) }
     private val instrumentModIndex = FloatArray(50) { 1.0f }
     private val instrumentEnvelopeMode = Array(50) { EnvelopeMode.ADSR }
+    private val instrumentFreqOverride = Array<Float?>(50) { null }
 
     // Instrument Enable / Solo State
     private val instrumentEnabled = BooleanArray(50) { true }
@@ -422,7 +434,6 @@ class SynthesizerViewModel(
 
                     val unmatchedInstruments = mutableListOf<String>()
 
-                    // Automatically apply table FM parameters per instrument part
                     parsedSong.metadata.parts.forEachIndexed { index, part ->
                         val voiceIdx = index.coerceIn(0, 49)
                         val matchResult = getFmParametersForInstrumentWithMatchInfo(part.name, part.instrumentName)
@@ -435,6 +446,7 @@ class SynthesizerViewModel(
                         instrumentCm[voiceIdx] = preset.cmRatio
                         instrumentModIndex[voiceIdx] = preset.modulationIndex
                         instrumentEnvelopeMode[voiceIdx] = preset.envelopeMode
+                        instrumentFreqOverride[voiceIdx] = preset.overrideFrequencyHz
 
                         synthesizer.setCMRatio(preset.cmRatio, voiceIdx)
                         synthesizer.setModulationIndex(preset.modulationIndex, voiceIdx)
@@ -446,7 +458,6 @@ class SynthesizerViewModel(
                         unmatchedInstruments.forEach { println("   - $it") }
                     }
 
-                    // Update UI state for currently selected instrument
                     val currentSelected = _selectedInstrumentIndex.value
                     _cmRatio.value = instrumentCm[currentSelected]
                     _index.value = instrumentModIndex[currentSelected]
@@ -487,6 +498,7 @@ class SynthesizerViewModel(
                     instrumentCm[voiceIdx] = preset.cmRatio
                     instrumentModIndex[voiceIdx] = preset.modulationIndex
                     instrumentEnvelopeMode[voiceIdx] = preset.envelopeMode
+                    instrumentFreqOverride[voiceIdx] = preset.overrideFrequencyHz
 
                     synthesizer.setCMRatio(preset.cmRatio, voiceIdx)
                     synthesizer.setModulationIndex(preset.modulationIndex, voiceIdx)
@@ -546,7 +558,8 @@ class SynthesizerViewModel(
 
                     val durationSec = (note.duration.toFloat() / 1000f).coerceAtLeast(0.05f)
                     val envMode = instrumentEnvelopeMode[voiceIndex]
-                    val playbackFreq = adjustFrequencyForUnpitchedPercussion(note.frequency, envMode)
+                    val overrideFreq = instrumentFreqOverride[voiceIndex]
+                    val playbackFreq = overrideFreq ?: adjustFrequencyForUnpitchedPercussion(note.frequency, envMode)
 
                     launch {
                         synthesizer.setFrequency(playbackFreq, voiceIndex, durationSec)
