@@ -18,12 +18,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -37,116 +37,70 @@ import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sputnik.fmsynthesizer.model.EnvelopeMode
 import com.sputnik.fmsynthesizer.model.SongDownloadState
 import com.sputnik.fmsynthesizer.model.SongListState
 import com.sputnik.fmsynthesizer.model.SynthesizerViewModel
 import com.sputnik.fmsynthesizer.ui.EnvelopePlot
+import com.sputnik.fmsynthesizer.ui.rememberFilePicker
 
 @Composable
-fun WheelPicker(
-    value: Int,
-    onValueChange: (Int) -> Unit,
-    range: IntRange = 1..15,
-    label: String,
-    modifier: Modifier = Modifier
-) {
-    val items = remember(range) { range.toList() }
-    val initialPage = (value - range.first).coerceIn(0, items.size - 1)
-    val pagerState = rememberPagerState(initialPage = initialPage) { items.size }
+fun App(viewModel: SynthesizerViewModel = remember { SynthesizerViewModel() }) {
+    MaterialTheme {
+        val pagerState = rememberPagerState(pageCount = { 3 })
 
-    LaunchedEffect(pagerState.currentPage) {
-        val selectedValue = items[pagerState.currentPage]
-        if (selectedValue != value) {
-            onValueChange(selectedValue)
-        }
-    }
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onPrimaryContainer
-        )
-        Spacer(modifier = Modifier.height(6.dp))
         Box(
             modifier = Modifier
-                .width(72.dp)
-                .height(100.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
-        ) {
-            VerticalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = 32.dp)
-            ) { page ->
-                val item = items[page]
-                val isSelected = page == pagerState.currentPage
-                Text(
-                    text = item.toString(),
-                    style = if (isSelected) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyMedium,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(0.85f)
-                    .height(36.dp)
-                    .border(
-                        width = 2.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(8.dp)
-                    )
-            )
-        }
-    }
-}
-
-@Composable
-@Preview
-fun App(viewModel: SynthesizerViewModel = viewModel { SynthesizerViewModel() }) {
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("FM Settings", "Envelope", "Music Library")
-
-    MaterialTheme {
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .safeContentPadding()
         ) {
-            SecondaryTabRow(selectedTabIndex = selectedTabIndex) {
-                tabs.forEachIndexed { index, title ->
+            Column(modifier = Modifier.fillMaxSize()) {
+                SecondaryTabRow(
+                    selectedTabIndex = pagerState.currentPage,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Tab(
-                        selected = selectedTabIndex == index,
-                        onClick = { selectedTabIndex = index },
-                        text = { Text(text = title) }
+                        selected = pagerState.currentPage == 0,
+                        onClick = { },
+                        text = { Text("FM Settings") }
+                    )
+                    Tab(
+                        selected = pagerState.currentPage == 1,
+                        onClick = { },
+                        text = { Text("Envelope") }
+                    )
+                    Tab(
+                        selected = pagerState.currentPage == 2,
+                        onClick = { },
+                        text = { Text("Music Library") }
                     )
                 }
-            }
 
-            when (selectedTabIndex) {
-                0 -> FmSettingsTab(viewModel)
-                1 -> EnvelopeTab(viewModel)
-                2 -> MusicLibraryTab(viewModel)
+                VerticalPager(
+                    state = pagerState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) { page ->
+                    when (page) {
+                        0 -> FmSettingsTab(viewModel = viewModel)
+                        1 -> EnvelopeTab(viewModel = viewModel)
+                        2 -> MusicLibraryTab(viewModel = viewModel)
+                    }
+                }
             }
         }
     }
@@ -154,152 +108,172 @@ fun App(viewModel: SynthesizerViewModel = viewModel { SynthesizerViewModel() }) 
 
 @Composable
 fun FmSettingsTab(viewModel: SynthesizerViewModel) {
-    val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
     val frequency by viewModel.frequency.collectAsStateWithLifecycle()
-    val modulationIndex by viewModel.index.collectAsStateWithLifecycle()
-    val cmRatio by viewModel.carrierRatio.collectAsStateWithLifecycle()
-
-    val modulationIndex2 by viewModel.index2.collectAsStateWithLifecycle()
-    val cmRatio2 by viewModel.carrierRatio2.collectAsStateWithLifecycle()
+    val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+    val index by viewModel.index.collectAsStateWithLifecycle()
+    val carrierRatio by viewModel.carrierRatio.collectAsStateWithLifecycle()
+    val index2 by viewModel.index2.collectAsStateWithLifecycle()
+    val carrierRatio2 by viewModel.carrierRatio2.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top
     ) {
-        Button(
-            onClick = { viewModel.togglePlayStop() }
-        ) {
-            Text(if (isPlaying) "Stop" else "Play")
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
         Text(
-            text = "Fundamental Frequency: ${frequency.toInt()} Hz",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer
+            text = "FM Synthesizer Controls",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
         )
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
+        Button(
+            onClick = { viewModel.togglePlayStop() },
+            modifier = Modifier.padding(8.dp)
+        ) {
+            Text(if (isPlaying) "Stop Test Tone" else "Play Test Tone")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(text = "Frequency: ${frequency.toInt()} Hz")
         Slider(
             value = frequency,
             onValueChange = { viewModel.setFrequency(it) },
-            valueRange = 55f..1760f,
+            valueRange = 100f..2000f,
             modifier = Modifier.fillMaxWidth(0.85f)
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-        HorizontalDivider(modifier = Modifier.fillMaxWidth(0.9f))
-        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-        // 1st Order FM Controls
         Text(
-            text = "1st Order Modulation Index: ${((modulationIndex * 100).toInt() / 100f)}",
+            text = "1st Order FM Modulation",
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer
+            fontWeight = FontWeight.SemiBold
         )
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
+        Text(text = "Modulation Index (I₁): ${((index * 100).toInt() / 100f)}")
         Slider(
-            value = modulationIndex,
+            value = index,
             onValueChange = { viewModel.setModulationIndex(it) },
             valueRange = 0f..20f,
             modifier = Modifier.fillMaxWidth(0.85f)
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(text = "Carrier : Modulator Ratio (c:m) = ${carrierRatio.first} : ${carrierRatio.second}")
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "Carrier (c)")
+                WheelPicker(
+                    value = carrierRatio.first,
+                    range = 1..16,
+                    onValueChange = { viewModel.setCMRatio(Pair(it, carrierRatio.second)) }
+                )
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "Modulator (m)")
+                WheelPicker(
+                    value = carrierRatio.second,
+                    range = 1..16,
+                    onValueChange = { viewModel.setCMRatio(Pair(carrierRatio.first, it)) }
+                )
+            }
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
         Text(
-            text = "1st Order Ratio (${cmRatio.first} : ${cmRatio.second})",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onPrimaryContainer
+            text = "2nd Order FM Modulation",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            WheelPicker(
-                value = cmRatio.first,
-                onValueChange = { viewModel.setCMRatio(Pair(it, cmRatio.second)) },
-                range = 1..15,
-                label = "Carrier 1"
-            )
-
-            Text(
-                text = ":",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            WheelPicker(
-                value = cmRatio.second,
-                onValueChange = { viewModel.setCMRatio(Pair(cmRatio.first, it)) },
-                range = 1..15,
-                label = "Modulator 1"
-            )
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-        HorizontalDivider(modifier = Modifier.fillMaxWidth(0.9f))
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 2nd Order FM Controls
-        Text(
-            text = "2nd Order Modulation Index: ${((modulationIndex2 * 100).toInt() / 100f)}",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
+        Text(text = "Modulation Index 2 (I₂): ${((index2 * 100).toInt() / 100f)}")
         Slider(
-            value = modulationIndex2,
+            value = index2,
             onValueChange = { viewModel.setModulationIndex2(it) },
             valueRange = 0f..20f,
             modifier = Modifier.fillMaxWidth(0.85f)
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = "2nd Order Ratio (${cmRatio2.first} : ${cmRatio2.second})",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onPrimaryContainer
-        )
-
         Spacer(modifier = Modifier.height(8.dp))
 
+        Text(text = "Carrier2 : Modulator2 Ratio = ${carrierRatio2.first} : ${carrierRatio2.second}")
         Row(
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            WheelPicker(
-                value = cmRatio2.first,
-                onValueChange = { viewModel.setCMRatio2(Pair(it, cmRatio2.second)) },
-                range = 1..15,
-                label = "Carrier 2"
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "Carrier 2")
+                WheelPicker(
+                    value = carrierRatio2.first,
+                    range = 1..16,
+                    onValueChange = { viewModel.setCMRatio2(Pair(it, carrierRatio2.second)) }
+                )
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "Modulator 2")
+                WheelPicker(
+                    value = carrierRatio2.second,
+                    range = 1..16,
+                    onValueChange = { viewModel.setCMRatio2(Pair(carrierRatio2.first, it)) }
+                )
+            }
+        }
+    }
+}
 
-            Text(
-                text = ":",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
+@Composable
+fun WheelPicker(
+    value: Int,
+    range: IntRange,
+    onValueChange: (Int) -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Button(
+            onClick = {
+                if (value > range.first) onValueChange(value - 1)
+            },
+            enabled = value > range.first,
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+        ) {
+            Text("-")
+        }
 
-            WheelPicker(
-                value = cmRatio2.second,
-                onValueChange = { viewModel.setCMRatio2(Pair(cmRatio2.first, it)) },
-                range = 1..15,
-                label = "Modulator 2"
-            )
+        Box(
+            modifier = Modifier
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = value.toString(), fontWeight = FontWeight.Bold)
+        }
+
+        Button(
+            onClick = {
+                if (value < range.last) onValueChange(value + 1)
+            },
+            enabled = value < range.last,
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+        ) {
+            Text("+")
         }
     }
 }
@@ -315,16 +289,38 @@ fun EnvelopeTab(viewModel: SynthesizerViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Envelope Generator",
-            style = MaterialTheme.typography.titleLarge,
+            text = "Envelope Generator (ADSR)",
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onPrimaryContainer
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .height(220.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
+            ) {
+                EnvelopePlot(
+                    attack = attack,
+                    decay = decay,
+                    sustain = sustain,
+                    release = release,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -377,29 +373,7 @@ fun EnvelopeTab(viewModel: SynthesizerViewModel) {
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .height(220.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp)
-            ) {
-                EnvelopePlot(
-                    attack = attack,
-                    decay = decay,
-                    sustain = sustain,
-                    release = release,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Text(text = "Attack: ${((attack * 1000).toInt())} ms")
         Slider(
@@ -451,8 +425,13 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
     val soloIndex by viewModel.soloInstrumentIndex.collectAsStateWithLifecycle()
     val stateVersion by viewModel.instrumentStateVersion.collectAsStateWithLifecycle()
 
+    var libraryTabSelected by remember { mutableStateOf(0) }
     var tokenInput by remember { mutableStateOf("") }
     val isTokenConfigured = githubToken.isNotBlank()
+
+    val openFilePicker = rememberFilePicker { fileName, content ->
+        viewModel.loadLocalMusicXml(fileName, content)
+    }
 
     Column(
         modifier = Modifier
@@ -460,120 +439,172 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        SecondaryTabRow(
+            selectedTabIndex = libraryTabSelected,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "GitHub Music Repository",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "https://github.com/LeonidBresjnev/myMusic.git",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Button(onClick = { viewModel.fetchRemoteSongs() }) {
-                Text("Refresh")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedTextField(
-                value = tokenInput,
-                onValueChange = { tokenInput = it },
-                label = {
-                    Text(
-                        if (isTokenConfigured) "GitHub Token (Configured & Protected)" else "GitHub Personal Access Token"
-                    )
-                },
-                placeholder = {
-                    if (isTokenConfigured) {
-                        Text("Token active and protected. Enter new token to override.")
-                    }
-                },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.weight(1f)
+            Tab(
+                selected = libraryTabSelected == 0,
+                onClick = { libraryTabSelected = 0 },
+                text = { Text("GitHub Repository") }
             )
-            Button(
-                onClick = {
-                    if (tokenInput.isNotBlank()) {
-                        viewModel.setGithubToken(tokenInput)
-                        tokenInput = ""
-                    }
-                }
+            Tab(
+                selected = libraryTabSelected == 1,
+                onClick = { libraryTabSelected = 1 },
+                text = { Text("Local MusicXML / Open") }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (libraryTabSelected == 0) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(if (isTokenConfigured && tokenInput.isBlank()) "Token Saved" else "Save Token")
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "GitHub Music Repository",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "https://github.com/LeonidBresjnev/myMusic.git",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Button(onClick = { viewModel.fetchRemoteSongs() }) {
+                    Text("Refresh")
+                }
             }
-        }
 
-        Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(0.5f)
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = "Song Library",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = tokenInput,
+                    onValueChange = { tokenInput = it },
+                    label = {
+                        Text(
+                            if (isTokenConfigured) "GitHub Token (Configured & Protected)" else "GitHub Personal Access Token"
+                        )
+                    },
+                    placeholder = {
+                        if (isTokenConfigured) {
+                            Text("Token active and protected. Enter new token to override.")
+                        }
+                    },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.weight(1f)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        if (tokenInput.isNotBlank()) {
+                            viewModel.setGithubToken(tokenInput)
+                            tokenInput = ""
+                        }
+                    }
+                ) {
+                    Text(if (isTokenConfigured && tokenInput.isBlank()) "Token Saved" else "Save Token")
+                }
+            }
 
-                when (val state = songListState) {
-                    is SongListState.Loading -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
-                        }
-                    }
-                    is SongListState.Error -> {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = state.message, color = MaterialTheme.colorScheme.error)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Button(onClick = { viewModel.fetchRemoteSongs() }) {
-                                Text("Retry")
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.4f)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "Song Library",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    when (val state = songListState) {
+                        is SongListState.Loading -> {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator()
                             }
                         }
-                    }
-                    is SongListState.Success -> {
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
-                            items(state.songs) { song ->
-                                val isSelected = selectedSong?.downloadUrl == song.downloadUrl
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
-                                        .clickable { viewModel.selectAndDownloadSong(song) }
-                                        .padding(12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = song.name,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                    Text(
-                                        text = "${song.size / 1024} KB",
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
+                        is SongListState.Error -> {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(text = state.message, color = MaterialTheme.colorScheme.error)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Button(onClick = { viewModel.fetchRemoteSongs() }) {
+                                    Text("Retry")
                                 }
-                                Spacer(modifier = Modifier.height(4.dp))
                             }
                         }
+                        is SongListState.Success -> {
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                items(state.songs) { song ->
+                                    val isSelected = selectedSong?.downloadUrl == song.downloadUrl
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
+                                            .clickable { viewModel.selectAndDownloadSong(song) }
+                                            .padding(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = song.name,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                        Text(
+                                            text = "${song.size / 1024} KB",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.4f)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Open Local MusicXML File",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Select any .musicxml or .xml score file from your computer.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { openFilePicker() }
+                    ) {
+                        Text("Open MusicXML File...")
                     }
                 }
             }
@@ -581,16 +612,16 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        // Fixed Song Details Header + Scrollable Instrument List below
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.5f)
+                .weight(0.6f)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(12.dp)
-                    .verticalScroll(rememberScrollState())
             ) {
                 Text(
                     text = "Song Details",
@@ -601,7 +632,7 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
 
                 when (val dlState = downloadState) {
                     is SongDownloadState.Idle -> {
-                        Text("Select a song above to load metadata and notes.")
+                        Text("Select a song above or open a local file to load metadata and notes.")
                     }
                     is SongDownloadState.Downloading -> {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -617,6 +648,7 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
                         val song = dlState.song
                         val meta = song.metadata
 
+                        // Static Header Top
                         Text(
                             text = meta.title,
                             style = MaterialTheme.typography.titleLarge,
@@ -642,7 +674,7 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
                         Text(
                             text = "Instruments in Song (${meta.parts.size}):",
@@ -652,70 +684,77 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        meta.parts.forEachIndexed { index, part ->
-                            val isEnabled = viewModel.isInstrumentEnabled(index)
-                            val isSoloed = soloIndex == index
-                            val cm = viewModel.getInstrumentCm(index)
-                            val modIdx = viewModel.getInstrumentModIndex(index)
-                            val envMode = viewModel.getInstrumentEnvelopeMode(index)
+                        // Scrollable Instrument List
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                        ) {
+                            itemsIndexed(meta.parts) { index, part ->
+                                val isEnabled = viewModel.isInstrumentEnabled(index)
+                                val isSoloed = soloIndex == index
+                                val cm = viewModel.getInstrumentCm(index)
+                                val modIdx = viewModel.getInstrumentModIndex(index)
+                                val envMode = viewModel.getInstrumentEnvelopeMode(index)
 
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isSoloed) MaterialTheme.colorScheme.tertiaryContainer
-                                    else if (isEnabled) MaterialTheme.colorScheme.surfaceVariant
-                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                                )
-                            ) {
-                                Row(
+                                Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .padding(vertical = 4.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (isSoloed) MaterialTheme.colorScheme.tertiaryContainer
+                                        else if (isEnabled) MaterialTheme.colorScheme.surfaceVariant
+                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                    )
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "${part.id}: ${part.name.ifBlank { "Part ${index + 1}" }}",
-                                            fontWeight = FontWeight.Bold,
-                                            style = MaterialTheme.typography.titleSmall
-                                        )
-                                        if (part.instrumentName.isNotBlank() && part.instrumentName != part.name) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = "Instrument: ${part.instrumentName}",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                text = "${part.id}: ${part.name.ifBlank { "Part ${index + 1}" }}",
+                                                fontWeight = FontWeight.Bold,
+                                                style = MaterialTheme.typography.titleSmall
                                             )
+                                            if (part.instrumentName.isNotBlank() && part.instrumentName != part.name) {
+                                                Text(
+                                                    text = "Instrument: ${part.instrumentName}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                Badge { Text("c:m = ${cm.first}:${cm.second}") }
+                                                Badge { Text("I = $modIdx") }
+                                                Badge { Text("Mode = ${envMode.label}") }
+                                            }
                                         }
-                                        Spacer(modifier = Modifier.height(4.dp))
+
                                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                            Badge { Text("c:m = ${cm.first}:${cm.second}") }
-                                            Badge { Text("I = $modIdx") }
-                                            Badge { Text("Mode = ${envMode.label}") }
-                                        }
-                                    }
+                                            Button(
+                                                onClick = { viewModel.toggleInstrumentEnabled(index) },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                                                ),
+                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                            ) {
+                                                Text(if (isEnabled) "ON" else "OFF", style = MaterialTheme.typography.labelSmall)
+                                            }
 
-                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        Button(
-                                            onClick = { viewModel.toggleInstrumentEnabled(index) },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                                            ),
-                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                                        ) {
-                                            Text(if (isEnabled) "ON" else "OFF", style = MaterialTheme.typography.labelSmall)
-                                        }
-
-                                        Button(
-                                            onClick = { viewModel.toggleSoloInstrument(index) },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = if (isSoloed) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.surfaceTint
-                                            ),
-                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                                        ) {
-                                            Text("SOLO", style = MaterialTheme.typography.labelSmall)
+                                            Button(
+                                                onClick = { viewModel.toggleSoloInstrument(index) },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = if (isSoloed) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.surfaceTint
+                                                ),
+                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                            ) {
+                                                Text("SOLO", style = MaterialTheme.typography.labelSmall)
+                                            }
                                         }
                                     }
                                 }

@@ -460,6 +460,50 @@ class SynthesizerViewModel(
         }
     }
 
+    fun loadLocalMusicXml(fileName: String, xmlContent: String) {
+        stopSong()
+        _selectedSongItem.value = RemoteSongItem(
+            name = fileName,
+            path = fileName,
+            downloadUrl = "local",
+            size = xmlContent.length.toLong()
+        )
+        _downloadState.value = SongDownloadState.Downloading
+
+        viewModelScope.launch {
+            try {
+                val parsedSong = MusicXmlParser().parseSong(xmlContent, songNameHint = fileName)
+                _currentParsedSong.value = parsedSong
+                _downloadState.value = SongDownloadState.Success(parsedSong)
+
+                _soloInstrumentIndex.value = null
+                for (i in 0..49) instrumentEnabled[i] = true
+
+                parsedSong.metadata.parts.forEachIndexed { index, part ->
+                    val voiceIdx = index.coerceIn(0, 49)
+                    val matchResult = getFmParametersForInstrumentWithMatchInfo(part.name, part.instrumentName)
+                    val preset = matchResult.preset
+
+                    instrumentCm[voiceIdx] = preset.cmRatio
+                    instrumentModIndex[voiceIdx] = preset.modulationIndex
+                    instrumentEnvelopeMode[voiceIdx] = preset.envelopeMode
+
+                    synthesizer.setCMRatio(preset.cmRatio, voiceIdx)
+                    synthesizer.setModulationIndex(preset.modulationIndex, voiceIdx)
+                    synthesizer.setEnvelopeMode(preset.envelopeMode.ordinal, voiceIdx)
+                }
+
+                val currentSelected = _selectedInstrumentIndex.value
+                _cmRatio.value = instrumentCm[currentSelected]
+                _index.value = instrumentModIndex[currentSelected]
+                _envelopeMode.value = instrumentEnvelopeMode[currentSelected]
+                _instrumentStateVersion.value++
+            } catch (e: Throwable) {
+                _downloadState.value = SongDownloadState.Error("Failed to parse local MusicXML file: ${e.message}")
+            }
+        }
+    }
+
     fun playSong(song: ParsedSong) {
         stopSong()
         songPlaybackJob = viewModelScope.launch(Dispatchers.Default) {
