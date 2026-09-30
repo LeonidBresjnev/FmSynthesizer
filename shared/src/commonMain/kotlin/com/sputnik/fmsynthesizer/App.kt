@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.pager.VerticalPager
+import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,11 +56,13 @@ import com.sputnik.fmsynthesizer.model.SongListState
 import com.sputnik.fmsynthesizer.model.SynthesizerViewModel
 import com.sputnik.fmsynthesizer.ui.EnvelopePlot
 import com.sputnik.fmsynthesizer.ui.rememberFilePicker
+import kotlinx.coroutines.launch
 
 @Composable
 fun App(viewModel: SynthesizerViewModel = remember { SynthesizerViewModel() }) {
     MaterialTheme {
         val pagerState = rememberPagerState(pageCount = { 3 })
+        val coroutineScope = rememberCoroutineScope()
 
         Box(
             modifier = Modifier
@@ -74,22 +77,22 @@ fun App(viewModel: SynthesizerViewModel = remember { SynthesizerViewModel() }) {
                 ) {
                     Tab(
                         selected = pagerState.currentPage == 0,
-                        onClick = { },
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
                         text = { Text("FM Settings") }
                     )
                     Tab(
                         selected = pagerState.currentPage == 1,
-                        onClick = { },
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
                         text = { Text("Envelope") }
                     )
                     Tab(
                         selected = pagerState.currentPage == 2,
-                        onClick = { },
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
                         text = { Text("Music Library") }
                     )
                 }
 
-                VerticalPager(
+                HorizontalPager(
                     state = pagerState,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -423,9 +426,8 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
     val githubToken by viewModel.githubToken.collectAsStateWithLifecycle()
     val soloIndex by viewModel.soloInstrumentIndex.collectAsStateWithLifecycle()
-    val stateVersion by viewModel.instrumentStateVersion.collectAsStateWithLifecycle()
 
-    var libraryTabSelected by remember { mutableStateOf(0) }
+    var songSourceSelected by remember { mutableStateOf(0) }
     var tokenInput by remember { mutableStateOf("") }
     val isTokenConfigured = githubToken.isNotBlank()
 
@@ -440,95 +442,88 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         SecondaryTabRow(
-            selectedTabIndex = libraryTabSelected,
+            selectedTabIndex = songSourceSelected,
             modifier = Modifier.fillMaxWidth()
         ) {
             Tab(
-                selected = libraryTabSelected == 0,
-                onClick = { libraryTabSelected = 0 },
+                selected = songSourceSelected == 0,
+                onClick = { songSourceSelected = 0 },
                 text = { Text("GitHub Repository") }
             )
             Tab(
-                selected = libraryTabSelected == 1,
-                onClick = { libraryTabSelected = 1 },
-                text = { Text("Local MusicXML / Open") }
+                selected = songSourceSelected == 1,
+                onClick = { songSourceSelected = 1 },
+                text = { Text("Local Files / Open") }
             )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        if (libraryTabSelected == 0) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "GitHub Music Repository",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "https://github.com/LeonidBresjnev/myMusic.git",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Button(onClick = { viewModel.fetchRemoteSongs() }) {
-                    Text("Refresh")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedTextField(
-                    value = tokenInput,
-                    onValueChange = { tokenInput = it },
-                    label = {
-                        Text(
-                            if (isTokenConfigured) "GitHub Token (Configured & Protected)" else "GitHub Personal Access Token"
-                        )
-                    },
-                    placeholder = {
-                        if (isTokenConfigured) {
-                            Text("Token active and protected. Enter new token to override.")
-                        }
-                    },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.weight(1f)
-                )
-                Button(
-                    onClick = {
-                        if (tokenInput.isNotBlank()) {
-                            viewModel.setGithubToken(tokenInput)
-                            tokenInput = ""
-                        }
-                    }
-                ) {
-                    Text(if (isTokenConfigured && tokenInput.isBlank()) "Token Saved" else "Save Token")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
+        if (songSourceSelected == 0) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.4f)
+                    .weight(0.45f)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "Song Library",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "https://github.com/LeonidBresjnev/myMusic.git",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Button(
+                            onClick = { viewModel.fetchRemoteSongs() },
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                        ) {
+                            Text("Refresh", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = tokenInput,
+                            onValueChange = { tokenInput = it },
+                            label = {
+                                Text(
+                                    if (isTokenConfigured) "GitHub Token (Configured & Protected)" else "GitHub Personal Access Token",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            },
+                            placeholder = {
+                                if (isTokenConfigured) {
+                                    Text("Token active. Enter new token to override.", style = MaterialTheme.typography.labelSmall)
+                                }
+                            },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier.weight(1f)
+                        )
+                        Button(
+                            onClick = {
+                                if (tokenInput.isNotBlank()) {
+                                    viewModel.setGithubToken(tokenInput)
+                                    tokenInput = ""
+                                }
+                            },
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                        ) {
+                            Text(if (isTokenConfigured && tokenInput.isBlank()) "Token Saved" else "Save Token", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(8.dp))
 
                     when (val state = songListState) {
@@ -556,13 +551,14 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
                                             .clip(RoundedCornerShape(8.dp))
                                             .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
                                             .clickable { viewModel.selectAndDownloadSong(song) }
-                                            .padding(12.dp),
+                                            .padding(10.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
                                             text = song.name,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            style = MaterialTheme.typography.bodyMedium
                                         )
                                         Text(
                                             text = "${song.size / 1024} KB",
@@ -580,7 +576,7 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.4f)
+                    .weight(0.45f)
             ) {
                 Column(
                     modifier = Modifier
@@ -596,7 +592,7 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Select any .musicxml or .xml score file from your computer.",
+                        text = "Select any .musicxml or .xml score file from your local disk or folder.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -612,55 +608,72 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Fixed Song Details Header + Scrollable Instrument List below
+        // Fixed Song Details Header + Scrollable Instrument List
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.6f)
+                .weight(0.55f)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(12.dp)
             ) {
-                Text(
-                    text = "Song Details",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
                 when (val dlState = downloadState) {
                     is SongDownloadState.Idle -> {
-                        Text("Select a song above or open a local file to load metadata and notes.")
+                        Text(
+                            text = "Song Details",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Select a song from GitHub repository or open a local MusicXML file.")
                     }
                     is SongDownloadState.Downloading -> {
+                        Text(
+                            text = "Song Details",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Parsing MusicXML...")
+                            Text("Parsing MusicXML score...")
                         }
                     }
                     is SongDownloadState.Error -> {
+                        Text(
+                            text = "Song Details",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text("Error: ${dlState.message}", color = MaterialTheme.colorScheme.error)
                     }
                     is SongDownloadState.Success -> {
                         val song = dlState.song
                         val meta = song.metadata
 
-                        // Static Header Top
-                        Text(
-                            text = meta.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        // Static Header Top (Fixed, does not scroll)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = meta.title,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "Notes: ${meta.totalNotes} | Duration: ~${meta.totalDurationMs / 1000}s",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
 
-                        Text(text = "Total Notes: ${meta.totalNotes} | Duration: ${meta.totalDurationMs / 1000}s")
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Button(
                                 onClick = {
                                     if (isPlaying) {
@@ -674,7 +687,7 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
                             }
                         }
 
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
 
                         Text(
                             text = "Instruments in Song (${meta.parts.size}):",
@@ -682,7 +695,7 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
                             fontWeight = FontWeight.SemiBold
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         // Scrollable Instrument List
                         LazyColumn(
@@ -710,7 +723,7 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(12.dp),
+                                            .padding(10.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
