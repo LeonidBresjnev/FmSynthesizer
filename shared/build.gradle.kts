@@ -8,6 +8,10 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
+compose.resources {
+    publicResClass = true
+}
+
 val generateTokenConfig = tasks.register("generateTokenConfig") {
     val token = System.getenv("MUSICXML_TOKEN") ?: System.getenv("musicxmlToken") ?: ""
     val outputDir = layout.buildDirectory.dir("generated/source/tokenConfig/commonMain/com/sputnik/fmsynthesizer/model")

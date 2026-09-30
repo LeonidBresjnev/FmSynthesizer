@@ -38,10 +38,16 @@ fun getFmParametersForInstrumentWithMatchInfo(partName: String, instrumentName: 
     val text = "$partName $instrumentName".lowercase()
 
     return when {
-        // Bass Drum / Stortromme / Kick Drum -> Pitched at ~50 Hz (G-tone)
+        // Bass Drum / Stortromme / Kick Drum -> c:m = 2:3, I = 1.5, freq = 50 Hz
         text.contains("bass drum") || text.contains("stortromme") || text.contains("kick drum") ||
-                text.contains("bdrum") || text.contains("bas tromme") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(16, 11), 15.0f, EnvelopeMode.DRUM, overrideFrequencyHz = 50.0f), true)
+                text.contains("bdrum") || text.contains("bastromme") || text.contains("bas tromme") -> {
+            FmInstrumentMatchResult(FmInstrumentPreset(Pair(2, 3), 1.5f, EnvelopeMode.DRUM, overrideFrequencyHz = 50.0f), true)
+        }
+
+        // Snare Drum / Lilletromme -> c:m = 2:3, I = 5.0, freq = 150 Hz
+        text.contains("snare") || text.contains("lilletromme") || text.contains("lille tromme") ||
+                text.contains("snare drum") -> {
+            FmInstrumentMatchResult(FmInstrumentPreset(Pair(2, 3), 5.0f, EnvelopeMode.DRUM, overrideFrequencyHz = 150.0f), true)
         }
 
         // Timpani / Pauke -> Pitched deep at ~65 Hz (C-tone)
@@ -101,12 +107,12 @@ fun getFmParametersForInstrumentWithMatchInfo(partName: String, instrumentName: 
             FmInstrumentMatchResult(FmInstrumentPreset(Pair(16, 11), 8.0f, EnvelopeMode.PERCUSSIVE), true)
         }
 
-        // 10. Drums / Percussion / Tromme / Lilletromme / Slagtøj / Perkussion: c:m = 16:11 (1.45), I = 15.0, DRUM
-        text.contains("drum") || text.contains("tromme") || text.contains("lilletromme") ||
+        // 10. General Drums / Percussion / Trommer: c:m = 2:3, I = 1.5, freq = 150 Hz
+        text.contains("drum") || text.contains("tromme") || text.contains("trætromme") ||
                 text.contains("slagtøj") || text.contains("percussion") || text.contains("perkussion") ||
-                text.contains("snare") || text.contains("tom") || text.contains("conga") ||
-                text.contains("bongo") || text.contains("cajon") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(16, 11), 15.0f, EnvelopeMode.DRUM), true)
+                text.contains("tom") || text.contains("conga") || text.contains("bongo") ||
+                text.contains("cajon") -> {
+            FmInstrumentMatchResult(FmInstrumentPreset(Pair(2, 3), 1.5f, EnvelopeMode.DRUM, overrideFrequencyHz = 150.0f), true)
         }
 
         // 11. Trumpet / Brass / Messingblæser / Trompet / Kornet: c:m = 1:1, I = 5.0, ADSR
