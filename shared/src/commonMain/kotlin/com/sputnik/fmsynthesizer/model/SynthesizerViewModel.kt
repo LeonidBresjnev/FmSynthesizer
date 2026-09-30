@@ -347,10 +347,10 @@ class SynthesizerViewModel(
 
     fun setCMRatio(ratio: Pair<Int, Int>) {
         val safeInst = _selectedInstrumentIndex.value
-        val cm = reduceRatio(ratio)
-        _cmRatio.value = cm
-        instrumentCm[safeInst] = cm
+        _cmRatio.value = ratio
+        instrumentCm[safeInst] = ratio
         viewModelScope.launch {
+            val cm = reduceRatio(ratio)
             synthesizer.setCMRatio(cm, safeInst)
         }
     }
@@ -363,9 +363,9 @@ class SynthesizerViewModel(
     }
 
     fun setCMRatio2(ratio: Pair<Int, Int>) {
-        val cm = reduceRatio(ratio)
-        _cmRatio2.value = cm
+        _cmRatio2.value = ratio
         viewModelScope.launch {
+            val cm = reduceRatio(ratio)
             synthesizer.setCMRatio2(cm, _selectedInstrumentIndex.value)
         }
     }
