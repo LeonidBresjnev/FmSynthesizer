@@ -1,5 +1,7 @@
 package com.sputnik.fmsynthesizer.model
 
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -10,18 +12,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.abs
-
-data class FmInstrumentPreset(
-    val cmRatio: Pair<Int, Int>,
-    val modulationIndex: Float,
-    val envelopeMode: EnvelopeMode,
-    val overrideFrequencyHz: Float? = null
-)
-
-data class FmInstrumentMatchResult(
-    val preset: FmInstrumentPreset,
-    val isMatched: Boolean
-)
 
 fun adjustFrequencyForUnpitchedPercussion(freq: Float, envelopeMode: EnvelopeMode): Float {
     val isPercussion = envelopeMode == EnvelopeMode.DRUM || envelopeMode == EnvelopeMode.PERCUSSIVE
@@ -238,8 +228,7 @@ class SynthesizerViewModel(
     // Music Library State
     private val gitHubService = GitHubMusicService()
 
-    private val _githubToken = MutableStateFlow(DefaultTokenConfig.DEFAULT_TOKEN)
-    val githubToken: StateFlow<String> = _githubToken.asStateFlow()
+    val githubTokenState = TextFieldState(initialText = DefaultTokenConfig.DEFAULT_TOKEN)
 
     private val _songListState = MutableStateFlow<SongListState>(SongListState.Loading)
     val songListState: StateFlow<SongListState> = _songListState.asStateFlow()
@@ -405,14 +394,15 @@ class SynthesizerViewModel(
 
     // Music Library Functions
     fun setGithubToken(token: String) {
-        _githubToken.value = token.trim()
+        githubTokenState.setTextAndPlaceCursorAtEnd(token.trim())
         fetchRemoteSongs()
     }
 
     fun fetchRemoteSongs() {
         viewModelScope.launch {
             _songListState.value = SongListState.Loading
-            val result = gitHubService.fetchSongList(_githubToken.value)
+            val token = githubTokenState.text.toString().trim()
+            val result = gitHubService.fetchSongList(token)
             result.fold(
                 onSuccess = { songs ->
                     _songListState.value = SongListState.Success(songs)
@@ -432,7 +422,8 @@ class SynthesizerViewModel(
 
         viewModelScope.launch {
             _downloadState.value = SongDownloadState.Downloading
-            val result = gitHubService.downloadSongInMemory(songItem.downloadUrl, songItem.name, _githubToken.value)
+            val token = githubTokenState.text.toString().trim()
+            val result = gitHubService.downloadSongInMemory(songItem.downloadUrl, songItem.name, token)
             result.fold(
                 onSuccess = { parsedSong ->
                     _currentParsedSong.value = parsedSong

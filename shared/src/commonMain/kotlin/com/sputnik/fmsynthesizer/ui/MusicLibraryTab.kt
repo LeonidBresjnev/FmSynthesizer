@@ -2,6 +2,7 @@ package com.sputnik.fmsynthesizer.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,15 +19,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -40,11 +45,69 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sputnik.fmsynthesizer.model.SongDownloadState
 import com.sputnik.fmsynthesizer.model.SongListState
 import com.sputnik.fmsynthesizer.model.SynthesizerViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProtectedTokenInput(
+    state: TextFieldState,
+    isConfigured: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    var tfValue by remember(state.text) {
+        mutableStateOf(TextFieldValue(state.text.toString()))
+    }
+
+    BasicTextField(
+        value = tfValue,
+        onValueChange = { newTfValue ->
+            tfValue = newTfValue
+            state.setTextAndPlaceCursorAtEnd(newTfValue.text)
+        },
+        modifier = modifier,
+        singleLine = true,
+        visualTransformation = PasswordVisualTransformation(),
+        interactionSource = interactionSource,
+        textStyle = MaterialTheme.typography.bodyMedium.copy(
+            color = MaterialTheme.colorScheme.onSurface
+        ),
+        decorationBox = @Composable { innerTextField ->
+            OutlinedTextFieldDefaults.DecorationBox(
+                value = tfValue.text,
+                innerTextField = innerTextField,
+                enabled = true,
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                interactionSource = interactionSource,
+                label = {
+                    Text(
+                        if (isConfigured) "GitHub Token (Configured & Protected)" else "GitHub Personal Access Token",
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                },
+                placeholder = {
+                    if (isConfigured) {
+                        Text("Token active. Enter new token to override.", style = MaterialTheme.typography.labelSmall)
+                    }
+                },
+                container = {
+                    OutlinedTextFieldDefaults.Container(
+                        enabled = true,
+                        isError = false,
+                        interactionSource = interactionSource,
+                        colors = OutlinedTextFieldDefaults.colors()
+                    )
+                }
+            )
+        }
+    )
+}
 
 @Composable
 fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
@@ -52,12 +115,10 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
     val selectedSong by viewModel.selectedSongItem.collectAsStateWithLifecycle()
     val downloadState by viewModel.downloadState.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
-    val githubToken by viewModel.githubToken.collectAsStateWithLifecycle()
     val soloIndex by viewModel.soloInstrumentIndex.collectAsStateWithLifecycle()
 
     var songSourceSelected by remember { mutableStateOf(0) }
-    var tokenInput by remember { mutableStateOf("") }
-    val isTokenConfigured = githubToken.isNotBlank()
+    val isTokenConfigured = viewModel.githubTokenState.text.isNotBlank()
 
     val openFilePicker = rememberFilePicker { fileName, content ->
         viewModel.loadLocalMusicXml(fileName, content)
@@ -121,34 +182,18 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedTextField(
-                            value = tokenInput,
-                            onValueChange = { tokenInput = it },
-                            label = {
-                                Text(
-                                    if (isTokenConfigured) "GitHub Token (Configured & Protected)" else "GitHub Personal Access Token",
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                            },
-                            placeholder = {
-                                if (isTokenConfigured) {
-                                    Text("Token active. Enter new token to override.", style = MaterialTheme.typography.labelSmall)
-                                }
-                            },
-                            singleLine = true,
-                            visualTransformation = PasswordVisualTransformation(),
+                        ProtectedTokenInput(
+                            state = viewModel.githubTokenState,
+                            isConfigured = isTokenConfigured,
                             modifier = Modifier.weight(1f)
                         )
                         Button(
                             onClick = {
-                                if (tokenInput.isNotBlank()) {
-                                    viewModel.setGithubToken(tokenInput)
-                                    tokenInput = ""
-                                }
+                                viewModel.fetchRemoteSongs()
                             },
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                         ) {
-                            Text(if (isTokenConfigured && tokenInput.isBlank()) "Token Saved" else "Save Token", style = MaterialTheme.typography.labelMedium)
+                            Text("Save Token", style = MaterialTheme.typography.labelMedium)
                         }
                     }
 
