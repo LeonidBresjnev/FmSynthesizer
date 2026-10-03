@@ -1,11 +1,11 @@
 package com.sputnik.fmsynthesizer.model
 
-class GitHubMusicService {
-    companion object {
+object GitHubMusicService {
+    /*companion object {*/
         const val REPO_INFO_URL = "https://api.github.com/repos/LeonidBresjnev/myMusic"
         const val REPO_CONTENTS_URL = "https://api.github.com/repos/LeonidBresjnev/myMusic/contents"
         const val RAW_BASE_URL = "https://raw.githubusercontent.com/LeonidBresjnev/myMusic/"
-    }
+    /*}*/
 
     suspend fun fetchSongList(authToken: String? = null): Result<List<RemoteSongItem>> {
         return runCatching {

@@ -1,7 +1,6 @@
 package com.sputnik.fmsynthesizer.model
 
 import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -12,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.time.Duration.Companion.milliseconds
 
 fun adjustFrequencyForUnpitchedPercussion(freq: Float, envelopeMode: EnvelopeMode): Float {
     val isPercussion = envelopeMode == EnvelopeMode.DRUM || envelopeMode == EnvelopeMode.PERCUSSIVE
@@ -163,10 +163,10 @@ fun getFmParametersForInstrumentWithMatchInfo(partName: String, instrumentName: 
         }
     }
 }
-
+/*
 fun getFmParametersForInstrument(partName: String, instrumentName: String): FmInstrumentPreset {
     return getFmParametersForInstrumentWithMatchInfo(partName, instrumentName).preset
-}
+}*/
 
 class SynthesizerViewModel(
     val synthesizer: FmSynthesizer = LoggingFmSynthesizer()
@@ -210,7 +210,7 @@ class SynthesizerViewModel(
 
     // Per-instrument parameters (50 instruments)
     private val _selectedInstrumentIndex = MutableStateFlow(0)
-    val selectedInstrumentIndex: StateFlow<Int> = _selectedInstrumentIndex.asStateFlow()
+    //val selectedInstrumentIndex: StateFlow<Int> = _selectedInstrumentIndex.asStateFlow()
 
     private val instrumentCm = Array(50) { Pair(1, 1) }
     private val instrumentModIndex = FloatArray(50) { 1.0f }
@@ -223,10 +223,10 @@ class SynthesizerViewModel(
     val soloInstrumentIndex: StateFlow<Int?> = _soloInstrumentIndex.asStateFlow()
 
     private val _instrumentStateVersion = MutableStateFlow(0)
-    val instrumentStateVersion: StateFlow<Int> = _instrumentStateVersion.asStateFlow()
+    //val instrumentStateVersion: StateFlow<Int> = _instrumentStateVersion.asStateFlow()
 
     // Music Library State
-    private val gitHubService = GitHubMusicService()
+    private val gitHubService = GitHubMusicService
 
     val githubTokenState = TextFieldState(initialText = DefaultTokenConfig.DEFAULT_TOKEN)
 
@@ -240,7 +240,7 @@ class SynthesizerViewModel(
     val downloadState: StateFlow<SongDownloadState> = _downloadState.asStateFlow()
 
     private val _currentParsedSong = MutableStateFlow<ParsedSong?>(null)
-    val currentParsedSong: StateFlow<ParsedSong?> = _currentParsedSong.asStateFlow()
+    //val currentParsedSong: StateFlow<ParsedSong?> = _currentParsedSong.asStateFlow()
 
     private var songPlaybackJob: Job? = null
 
@@ -307,7 +307,7 @@ class SynthesizerViewModel(
             }
         }
     }
-
+/*
     fun selectInstrument(index: Int) {
         val safeIndex = index.coerceIn(0, 49)
         _selectedInstrumentIndex.value = safeIndex
@@ -320,7 +320,7 @@ class SynthesizerViewModel(
             synthesizer.setModulationIndex(instrumentModIndex[safeIndex], safeIndex)
             synthesizer.setEnvelopeMode(instrumentEnvelopeMode[safeIndex].ordinal, safeIndex)
         }
-    }
+    }*/
 
     fun setFrequency(frequencyInHz: Float) {
         _frequency.value = frequencyInHz
@@ -391,12 +391,12 @@ class SynthesizerViewModel(
     fun setDecay(value: Float) { _decay.value = value }
     fun setSustain(value: Float) { _sustain.value = value }
     fun setRelease(value: Float) { _release.value = value }
-
+/*
     // Music Library Functions
     fun setGithubToken(token: String) {
         githubTokenState.setTextAndPlaceCursorAtEnd(token.trim())
         fetchRemoteSongs()
-    }
+    }*/
 
     fun fetchRemoteSongs() {
         viewModelScope.launch {
@@ -538,25 +538,24 @@ class SynthesizerViewModel(
             val notesByStartTime = song.notes.groupBy { it.startTime }.entries.sortedBy { it.key }
             var currentTimelineMs = 0
 
-            for (entry in notesByStartTime) {
-                val startTimeMs = entry.key
-                val noteGroup = entry.value
+            for ((startTimeMs, noteGroup) in notesByStartTime) {
 
                 val delayTime = startTimeMs - currentTimelineMs
                 if (delayTime > 0) {
-                    delay(delayTime.toLong())
+                    delay(delayTime.toLong().milliseconds)
                     currentTimelineMs = startTimeMs
                 }
 
-                for (note in noteGroup) {
-                    val voiceIndex = partIdToVoiceMap[note.partId] ?: 0
+                for ((_, duration, frequency1, partId) in noteGroup) {
+                    val voiceIndex = partIdToVoiceMap[partId] ?: 0
 
                     if (!instrumentEnabled[voiceIndex]) continue
 
-                    val durationSec = (note.duration.toFloat() / 1000f).coerceAtLeast(0.05f)
+                    val durationSec = (duration.toFloat() / 1000f).coerceAtLeast(0.05f)
                     val envMode = instrumentEnvelopeMode[voiceIndex]
                     val overrideFreq = instrumentFreqOverride[voiceIndex]
-                    val playbackFreq = overrideFreq ?: adjustFrequencyForUnpitchedPercussion(note.frequency, envMode)
+                    val playbackFreq = overrideFreq ?: adjustFrequencyForUnpitchedPercussion(
+                        frequency1, envMode)
 
                     launch {
                         synthesizer.setFrequency(playbackFreq, voiceIndex, durationSec)
@@ -567,9 +566,9 @@ class SynthesizerViewModel(
             val totalDurationMs = song.metadata.totalDurationMs
             val remainingMs = totalDurationMs - currentTimelineMs
             if (remainingMs > 0) {
-                delay(remainingMs.toLong() + 500L)
+                delay((remainingMs.toLong() + 500L).milliseconds)
             } else {
-                delay(500L)
+                delay(500L.milliseconds)
             }
 
             for (voiceIdx in partIdToVoiceMap.values.distinct()) {

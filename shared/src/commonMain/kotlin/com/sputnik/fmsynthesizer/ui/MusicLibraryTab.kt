@@ -120,6 +120,9 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
                     ) {
                         OutlinedTextField(
                             state = viewModel.githubTokenState,
+                            outputTransformation = {
+                                replace(0, length, "•".repeat(originalText.length))
+                            },
                             label = {
                                 Text(
                                     if (isTokenConfigured) "GitHub Token (Configured & Protected)" else "GitHub Personal Access Token",
@@ -128,7 +131,10 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
                             },
                             placeholder = {
                                 if (isTokenConfigured) {
-                                    Text("Token active. Enter new token to override.", style = MaterialTheme.typography.labelSmall)
+                                    Text(
+                                        text = "Token active. Enter new token to override.",
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
                                 }
                             },
                             modifier = Modifier.weight(1f)
@@ -139,7 +145,8 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
                             },
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                         ) {
-                            Text("Save Token", style = MaterialTheme.typography.labelMedium)
+                            Text(text="Save Token",
+                                style = MaterialTheme.typography.labelMedium)
                         }
                     }
 

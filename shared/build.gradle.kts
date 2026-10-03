@@ -86,6 +86,7 @@ kotlin {
                 implementation(libs.androidx.lifecycle.viewmodelCompose)
                 implementation(libs.androidx.lifecycle.runtimeCompose)
                 implementation("io.ktor:ktor-client-core:3.1.1")
+                implementation(compose.material3)
             }
         }
         commonTest.dependencies {
