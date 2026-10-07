@@ -8,14 +8,14 @@ import kotlin.js.ExperimentalWasmJsInterop
 @JsFun("(callback) => { " +
         "  const input = document.createElement('input'); " +
         "  input.type = 'file'; " +
-        "  input.accept = '.xml,.musicxml,.mxl'; " +
+        "  input.accept = '.xml,.musicxml,.mxl,.mid,.midi'; " +
         "  input.onchange = (e) => { " +
         "    const files = e.target.files; " +
         "    if (files && files.length > 0) { " +
         "      const file = files[0]; " +
         "      const reader = new FileReader(); " +
         "      reader.onload = (re) => { callback(file.name, re.target.result); }; " +
-        "      reader.readAsText(file); " +
+        "      reader.readAsText(file, 'ISO-8859-1'); " +
         "    } " +
         "  }; " +
         "  input.click(); " +

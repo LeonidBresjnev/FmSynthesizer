@@ -14,7 +14,7 @@ actual fun rememberFilePicker(onFileSelected: (fileName: String, content: String
             try {
                 val input = document.createElement("input") as HTMLInputElement
                 input.type = "file"
-                input.accept = ".xml,.musicxml,.mxl"
+                input.accept = ".xml,.musicxml,.mxl,.mid,.midi"
                 input.onchange = {
                     val files = input.files
                     if (files != null && files.length > 0) {
@@ -25,7 +25,7 @@ actual fun rememberFilePicker(onFileSelected: (fileName: String, content: String
                                 val content = reader.result as? String ?: ""
                                 onFileSelected(file.name, content)
                             }
-                            reader.readAsText(file)
+                            reader.readAsText(file, "ISO-8859-1")
                         }
                     }
                 }

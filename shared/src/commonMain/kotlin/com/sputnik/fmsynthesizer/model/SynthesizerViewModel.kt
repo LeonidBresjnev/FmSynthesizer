@@ -414,11 +414,50 @@ class SynthesizerViewModel(
         }
     }
 
+    private suspend fun applySongPresets(parsedSong: ParsedSong) {
+        _soloInstrumentIndex.value = null
+        for (i in 0..49) instrumentEnabled[i] = true
+
+        val numParts = parsedSong.metadata.parts.size.coerceAtLeast(1)
+        val polyphonyPerPart = (50 / numParts).coerceIn(1, 4)
+        val unmatchedInstruments = mutableListOf<String>()
+
+        parsedSong.metadata.parts.forEachIndexed { partIndex, part ->
+            val matchResult = getFmParametersForInstrumentWithMatchInfo(part.name, part.instrumentName)
+            val preset = matchResult.preset
+
+            if (!matchResult.isMatched) {
+                unmatchedInstruments.add("'${part.name}' (instrument: '${part.instrumentName}')")
+            }
+
+            for (pOffset in 0 until polyphonyPerPart) {
+                val voiceIdx = (partIndex * polyphonyPerPart + pOffset) % 50
+                instrumentCm[voiceIdx] = preset.cmRatio
+                instrumentModIndex[voiceIdx] = preset.modulationIndex
+                instrumentEnvelopeMode[voiceIdx] = preset.envelopeMode
+                instrumentFreqOverride[voiceIdx] = preset.overrideFrequencyHz
+
+                synthesizer.setCMRatio(preset.cmRatio, voiceIdx)
+                synthesizer.setModulationIndex(preset.modulationIndex, voiceIdx)
+                synthesizer.setEnvelopeMode(preset.envelopeMode.ordinal, voiceIdx)
+            }
+        }
+
+        if (unmatchedInstruments.isNotEmpty()) {
+            println("[FmSynthesizer] Unmatched instruments defaulting to ratio=1/1, index=1.0, ADSR:")
+            unmatchedInstruments.forEach { println("   - $it") }
+        }
+
+        val currentSelected = _selectedInstrumentIndex.value
+        _cmRatio.value = instrumentCm[currentSelected]
+        _index.value = instrumentModIndex[currentSelected]
+        _envelopeMode.value = instrumentEnvelopeMode[currentSelected]
+        _instrumentStateVersion.value++
+    }
+
     fun selectAndDownloadSong(songItem: RemoteSongItem) {
         stopSong()
         _selectedSongItem.value = songItem
-        _soloInstrumentIndex.value = null
-        for (i in 0..49) instrumentEnabled[i] = true
 
         viewModelScope.launch {
             _downloadState.value = SongDownloadState.Downloading
@@ -428,38 +467,7 @@ class SynthesizerViewModel(
                 onSuccess = { parsedSong ->
                     _currentParsedSong.value = parsedSong
                     _downloadState.value = SongDownloadState.Success(parsedSong)
-
-                    val unmatchedInstruments = mutableListOf<String>()
-
-                    parsedSong.metadata.parts.forEachIndexed { index, part ->
-                        val voiceIdx = index.coerceIn(0, 49)
-                        val matchResult = getFmParametersForInstrumentWithMatchInfo(part.name, part.instrumentName)
-                        val preset = matchResult.preset
-
-                        if (!matchResult.isMatched) {
-                            unmatchedInstruments.add("'${part.name}' (instrument: '${part.instrumentName}')")
-                        }
-
-                        instrumentCm[voiceIdx] = preset.cmRatio
-                        instrumentModIndex[voiceIdx] = preset.modulationIndex
-                        instrumentEnvelopeMode[voiceIdx] = preset.envelopeMode
-                        instrumentFreqOverride[voiceIdx] = preset.overrideFrequencyHz
-
-                        synthesizer.setCMRatio(preset.cmRatio, voiceIdx)
-                        synthesizer.setModulationIndex(preset.modulationIndex, voiceIdx)
-                        synthesizer.setEnvelopeMode(preset.envelopeMode.ordinal, voiceIdx)
-                    }
-
-                    if (unmatchedInstruments.isNotEmpty()) {
-                        println("[FmSynthesizer] Unmatched instruments defaulting to ratio=1/1, index=1.0, ADSR:")
-                        unmatchedInstruments.forEach { println("   - $it") }
-                    }
-
-                    val currentSelected = _selectedInstrumentIndex.value
-                    _cmRatio.value = instrumentCm[currentSelected]
-                    _index.value = instrumentModIndex[currentSelected]
-                    _envelopeMode.value = instrumentEnvelopeMode[currentSelected]
-                    _instrumentStateVersion.value++
+                    applySongPresets(parsedSong)
                 },
                 onFailure = { error ->
                     _downloadState.value = SongDownloadState.Error(error.message ?: "Failed to download song")
@@ -469,46 +477,36 @@ class SynthesizerViewModel(
     }
 
     fun loadLocalMusicXml(fileName: String, xmlContent: String) {
+        loadLocalMusicFile(fileName, xmlContent)
+    }
+
+    fun loadLocalMusicFile(fileName: String, content: String) {
         stopSong()
         _selectedSongItem.value = RemoteSongItem(
             name = fileName,
             path = fileName,
             downloadUrl = "local",
-            size = xmlContent.length.toLong()
+            size = content.length.toLong()
         )
         _downloadState.value = SongDownloadState.Downloading
 
         viewModelScope.launch {
             try {
-                val parsedSong = MusicXmlParser().parseSong(xmlContent, songNameHint = fileName)
-                _currentParsedSong.value = parsedSong
-                _downloadState.value = SongDownloadState.Success(parsedSong)
+                val isMidi = fileName.endsWith(".mid", ignoreCase = true) ||
+                        fileName.endsWith(".midi", ignoreCase = true) ||
+                        content.startsWith("MThd")
 
-                _soloInstrumentIndex.value = null
-                for (i in 0..49) instrumentEnabled[i] = true
-
-                parsedSong.metadata.parts.forEachIndexed { index, part ->
-                    val voiceIdx = index.coerceIn(0, 49)
-                    val matchResult = getFmParametersForInstrumentWithMatchInfo(part.name, part.instrumentName)
-                    val preset = matchResult.preset
-
-                    instrumentCm[voiceIdx] = preset.cmRatio
-                    instrumentModIndex[voiceIdx] = preset.modulationIndex
-                    instrumentEnvelopeMode[voiceIdx] = preset.envelopeMode
-                    instrumentFreqOverride[voiceIdx] = preset.overrideFrequencyHz
-
-                    synthesizer.setCMRatio(preset.cmRatio, voiceIdx)
-                    synthesizer.setModulationIndex(preset.modulationIndex, voiceIdx)
-                    synthesizer.setEnvelopeMode(preset.envelopeMode.ordinal, voiceIdx)
+                val parsedSong = if (isMidi) {
+                    MidiParser().parseSong(content.toLatin1ByteArray(), songNameHint = fileName)
+                } else {
+                    MusicXmlParser().parseSong(content, songNameHint = fileName)
                 }
 
-                val currentSelected = _selectedInstrumentIndex.value
-                _cmRatio.value = instrumentCm[currentSelected]
-                _index.value = instrumentModIndex[currentSelected]
-                _envelopeMode.value = instrumentEnvelopeMode[currentSelected]
-                _instrumentStateVersion.value++
+                _currentParsedSong.value = parsedSong
+                _downloadState.value = SongDownloadState.Success(parsedSong)
+                applySongPresets(parsedSong)
             } catch (e: Throwable) {
-                _downloadState.value = SongDownloadState.Error("Failed to parse local MusicXML file: ${e.message}")
+                _downloadState.value = SongDownloadState.Error("Failed to parse local music file: ${e.message}")
             }
         }
     }
@@ -518,21 +516,33 @@ class SynthesizerViewModel(
         songPlaybackJob = viewModelScope.launch(Dispatchers.Default) {
             _isPlaying.value = true
 
-            val partIdToVoiceMap = song.metadata.parts.mapIndexed { index, part ->
-                part.id to index.coerceIn(0, 49)
+            val partIdToPartIndexMap = song.metadata.parts.mapIndexed { index, part ->
+                part.id to index
             }.toMap().ifEmpty {
                 song.notes.map { it.partId }.distinct().mapIndexed { index, pId ->
-                    pId to index.coerceIn(0, 49)
+                    pId to index
                 }.toMap()
             }
 
-            for ((_, voiceIdx) in partIdToVoiceMap) {
-                val cm = instrumentCm[voiceIdx]
-                val mod = instrumentModIndex[voiceIdx]
-                val envMode = instrumentEnvelopeMode[voiceIdx]
-                synthesizer.setCMRatio(cm, voiceIdx)
-                synthesizer.setModulationIndex(mod, voiceIdx)
-                synthesizer.setEnvelopeMode(envMode.ordinal, voiceIdx)
+            val numParts = song.metadata.parts.size.coerceAtLeast(1)
+            val polyphonyPerPart = (50 / numParts).coerceIn(1, 4)
+            val partVoiceCounters = mutableMapOf<Int, Int>()
+
+            song.metadata.parts.forEachIndexed { partIndex, part ->
+                val matchResult = getFmParametersForInstrumentWithMatchInfo(part.name, part.instrumentName)
+                val preset = matchResult.preset
+
+                for (pOffset in 0 until polyphonyPerPart) {
+                    val voiceIdx = (partIndex * polyphonyPerPart + pOffset) % 50
+                    instrumentCm[voiceIdx] = preset.cmRatio
+                    instrumentModIndex[voiceIdx] = preset.modulationIndex
+                    instrumentEnvelopeMode[voiceIdx] = preset.envelopeMode
+                    instrumentFreqOverride[voiceIdx] = preset.overrideFrequencyHz
+
+                    synthesizer.setCMRatio(preset.cmRatio, voiceIdx)
+                    synthesizer.setModulationIndex(preset.modulationIndex, voiceIdx)
+                    synthesizer.setEnvelopeMode(preset.envelopeMode.ordinal, voiceIdx)
+                }
             }
 
             val notesByStartTime = song.notes.groupBy { it.startTime }.entries.sortedBy { it.key }
@@ -546,16 +556,19 @@ class SynthesizerViewModel(
                     currentTimelineMs = startTimeMs
                 }
 
-                for ((_, duration, frequency1, partId) in noteGroup) {
-                    val voiceIndex = partIdToVoiceMap[partId] ?: 0
+                for (note in noteGroup) {
+                    val partIndex = partIdToPartIndexMap[note.partId] ?: 0
+                    val pOffset = partVoiceCounters.getOrPut(partIndex) { 0 }
+                    partVoiceCounters[partIndex] = (pOffset + 1) % polyphonyPerPart
+                    val voiceIndex = (partIndex * polyphonyPerPart + pOffset) % 50
 
                     if (!instrumentEnabled[voiceIndex]) continue
 
-                    val durationSec = (duration.toFloat() / 1000f).coerceAtLeast(0.05f)
+                    val durationSec = (note.duration.toFloat() / 1000f).coerceAtLeast(0.05f)
                     val envMode = instrumentEnvelopeMode[voiceIndex]
                     val overrideFreq = instrumentFreqOverride[voiceIndex]
                     val playbackFreq = overrideFreq ?: adjustFrequencyForUnpitchedPercussion(
-                        frequency1, envMode)
+                        note.frequency, envMode)
 
                     launch {
                         synthesizer.setFrequency(playbackFreq, voiceIndex, durationSec)
@@ -571,8 +584,8 @@ class SynthesizerViewModel(
                 delay(500L.milliseconds)
             }
 
-            for (voiceIdx in partIdToVoiceMap.values.distinct()) {
-                synthesizer.stop(voiceIdx)
+            for (i in 0..49) {
+                synthesizer.stop(i)
             }
 
             _isPlaying.value = false

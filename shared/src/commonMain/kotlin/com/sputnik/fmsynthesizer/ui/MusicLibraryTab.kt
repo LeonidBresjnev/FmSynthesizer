@@ -57,7 +57,7 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
     val isTokenConfigured = viewModel.githubTokenState.text.isNotBlank()
 
     val openFilePicker = rememberFilePicker { fileName, content ->
-        viewModel.loadLocalMusicXml(fileName, content)
+        viewModel.loadLocalMusicFile(fileName, content)
     }
 
     Column(
@@ -212,13 +212,13 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "Open Local MusicXML File",
+                        text = "Open Local Music File",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Select any .musicxml or .xml score file from your local disk or folder.",
+                        text = "Select any MusicXML (.xml, .musicxml, .mxl) or MIDI (.mid, .midi) file from your local disk.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -226,7 +226,7 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
                     Button(
                         onClick = { openFilePicker() }
                     ) {
-                        Text("Open MusicXML File...")
+                        Text("Open Music File...")
                     }
                 }
             }

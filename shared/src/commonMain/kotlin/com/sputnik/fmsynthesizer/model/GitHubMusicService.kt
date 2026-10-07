@@ -59,7 +59,9 @@ object GitHubMusicService {
 
                 if (name.endsWith(".xml", ignoreCase = true) ||
                     name.endsWith(".musicxml", ignoreCase = true) ||
-                    name.endsWith(".mxl", ignoreCase = true)) {
+                    name.endsWith(".mxl", ignoreCase = true) ||
+                    name.endsWith(".mid", ignoreCase = true) ||
+                    name.endsWith(".midi", ignoreCase = true)) {
                     if (items.none { it.path == path }) {
                         items.add(RemoteSongItem(name = name, path = path, downloadUrl = downloadUrl, size = size))
                     }
@@ -80,33 +82,30 @@ object GitHubMusicService {
         return runCatching {
             val token = authToken?.trim()
             val headers = mutableMapOf(
-                "User-Agent" to "FmSynthesizerApp",
-                "Accept" to "application/vnd.github.v3.raw"
+                "User-Agent" to "FmSynthesizerApp"
             )
+
+            if (downloadUrl.contains("api.github.com", ignoreCase = true)) {
+                headers["Accept"] = "application/vnd.github.v3.raw"
+            } else {
+                headers["Accept"] = "*/*"
+            }
+
             if (!token.isNullOrBlank()) {
                 headers["Authorization"] = "Bearer $token"
             }
 
-            val xmlText = httpGet(downloadUrl, headers)
-            MusicXmlParser().parseSong(xmlText, songNameHint = songName)
-        }.recoverCatching {
-            val sampleXml = """
-                <score-partwise>
-                  <part-list>
-                    <score-part id="P1"><part-name>Melody</part-name></score-part>
-                  </part-list>
-                  <part id="P1">
-                    <measure number="1">
-                      <attributes><divisions>1</divisions></attributes>
-                      <note><pitch><step>C</step><octave>4</octave></pitch><duration>1</duration></note>
-                      <note><pitch><step>E</step><octave>4</octave></pitch><duration>1</duration></note>
-                      <note><pitch><step>G</step><octave>4</octave></pitch><duration>1</duration></note>
-                      <note><pitch><step>C</step><octave>5</octave></pitch><duration>1</duration></note>
-                    </measure>
-                  </part>
-                </score-partwise>
-            """.trimIndent()
-            MusicXmlParser().parseSong(sampleXml, songNameHint = songName)
+            val rawBytes = httpGetBytes(downloadUrl, headers)
+            val isMidi = songName.endsWith(".mid", ignoreCase = true) ||
+                    songName.endsWith(".midi", ignoreCase = true) ||
+                    (rawBytes.size >= 4 && rawBytes[0] == 0x4D.toByte() && rawBytes[1] == 0x54.toByte() && rawBytes[2] == 0x68.toByte() && rawBytes[3] == 0x64.toByte())
+
+            if (isMidi) {
+                MidiParser().parseSong(rawBytes, songNameHint = songName)
+            } else {
+                val xmlText = rawBytes.decodeToString()
+                MusicXmlParser().parseSong(xmlText, songNameHint = songName)
+            }
         }
     }
 
