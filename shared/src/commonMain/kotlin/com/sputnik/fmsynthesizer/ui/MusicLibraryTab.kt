@@ -1,5 +1,6 @@
 package com.sputnik.fmsynthesizer.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,7 +19,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -85,10 +89,12 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
         Spacer(modifier = Modifier.height(12.dp))
 
         if (songSourceSelected == 0) {
+            var showTokenInput by remember { mutableStateOf(!isTokenConfigured) }
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.45f)
+                    .weight(0.60f)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(
@@ -103,50 +109,68 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Button(
-                            onClick = { viewModel.fetchRemoteSongs() },
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                        ) {
-                            Text("Refresh", style = MaterialTheme.typography.labelMedium)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            state = viewModel.githubTokenState,
-                            outputTransformation = {
-                                replace(0, length, "•".repeat(originalText.length))
-                            },
-                            label = {
-                                Text(
-                                    if (isTokenConfigured) "GitHub Token (Configured & Protected)" else "GitHub Personal Access Token",
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                            },
-                            placeholder = {
-                                if (isTokenConfigured) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            if (isTokenConfigured) {
+                                androidx.compose.material3.TextButton(
+                                    onClick = { showTokenInput = !showTokenInput },
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                ) {
                                     Text(
-                                        text = "Token active. Enter new token to override.",
+                                        text = if (showTokenInput) "Hide Token" else "Edit Token",
                                         style = MaterialTheme.typography.labelSmall
                                     )
                                 }
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                        Button(
-                            onClick = {
-                                viewModel.fetchRemoteSongs()
-                            },
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                            }
+                            Button(
+                                onClick = { viewModel.fetchRemoteSongs() },
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                            ) {
+                                Text("Refresh", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+
+                    if (showTokenInput || !isTokenConfigured) {
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(text="Save Token",
-                                style = MaterialTheme.typography.labelMedium)
+                            OutlinedTextField(
+                                state = viewModel.githubTokenState,
+                                outputTransformation = {
+                                    replace(0, length, "•".repeat(originalText.length))
+                                },
+                                label = {
+                                    Text(
+                                        if (isTokenConfigured) "GitHub Token (Protected)" else "GitHub Personal Access Token",
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                },
+                                placeholder = {
+                                    if (isTokenConfigured) {
+                                        Text(
+                                            text = "Token active. Enter new token to override.",
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                            Button(
+                                onClick = {
+                                    viewModel.fetchRemoteSongs()
+                                    if (isTokenConfigured) showTokenInput = false
+                                },
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "Save Token",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
                         }
                     }
 
@@ -168,30 +192,63 @@ fun MusicLibraryTab(viewModel: SynthesizerViewModel) {
                             }
                         }
                         is SongListState.Success -> {
-                            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                                items(state.songs) { song ->
-                                    val isSelected = selectedSong?.downloadUrl == song.downloadUrl
-                                    Row(
+                            val lazyListState = rememberLazyListState()
+
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f),
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(6.dp)
+                                ) {
+                                    LazyColumn(
+                                        state = lazyListState,
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
-                                            .clickable { viewModel.selectAndDownloadSong(song) }
-                                            .padding(10.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                            .fillMaxSize()
+                                            .padding(end = 12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        Text(
-                                            text = song.name,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                        Text(
-                                            text = "${song.size / 1024} KB",
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
+                                        items(state.songs) { song ->
+                                            val isSelected = selectedSong?.downloadUrl == song.downloadUrl
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .background(
+                                                        if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                                        else MaterialTheme.colorScheme.surface
+                                                    )
+                                                    .clickable { viewModel.selectAndDownloadSong(song) }
+                                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = song.name,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                Text(
+                                                    text = "${song.size / 1024} KB",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
                                     }
-                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    AppVerticalScrollbar(
+                                        lazyListState = lazyListState,
+                                        modifier = Modifier
+                                            .align(Alignment.CenterEnd)
+                                            .fillMaxHeight()
+                                    )
                                 }
                             }
                         }

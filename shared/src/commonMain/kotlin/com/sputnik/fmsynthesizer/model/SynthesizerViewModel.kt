@@ -42,7 +42,7 @@ fun getFmParametersForInstrumentWithMatchInfo(partName: String, instrumentName: 
 
         // Timpani / Pauke -> Pitched deep at ~65 Hz (C-tone)
         text.contains("timpani") || text.contains("pauke") || text.contains("pauker") || text.contains("kettledrum") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(16, 11), 12.0f, EnvelopeMode.DRUM, overrideFrequencyHz = 65.41f), true)
+            FmInstrumentMatchResult(FmInstrumentPreset(Pair(2,3), 1.5f, EnvelopeMode.DRUM, overrideFrequencyHz = 65.41f), true)
         }
 
         // 1. Maracas / Rumbakugler: c:m = 1:2, I = 12.0, DRUM
@@ -68,7 +68,7 @@ fun getFmParametersForInstrumentWithMatchInfo(partName: String, instrumentName: 
         // 5. Wood block / Træblok / Trætromme: c:m = 16:11 (1.45), I = 5.0, PERCUSSIVE
         text.contains("wood block") || text.contains("woodblock") || text.contains("træblok") ||
                 text.contains("wood drum") || text.contains("trætromme") || text.contains("træ tromme") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(16, 11), 5.0f, EnvelopeMode.PERCUSSIVE), true)
+            FmInstrumentMatchResult(FmInstrumentPreset(Pair(2, 3), 1.5f, EnvelopeMode.PERCUSSIVE), true)
         }
 
         // 6. Cowbell / Koklokke / Ko-klokke: c:m = 16:11 (1.45), I = 8.0, PERCUSSIVE
@@ -94,7 +94,7 @@ fun getFmParametersForInstrumentWithMatchInfo(partName: String, instrumentName: 
                 text.contains("vibraphone") || text.contains("vibes") || text.contains("celesta") ||
                 text.contains("marimba") || text.contains("carillon") || text.contains("campana") ||
                 text.contains("triangle") || text.contains("triangel") -> {
-            FmInstrumentMatchResult(FmInstrumentPreset(Pair(16, 11), 8.0f, EnvelopeMode.PERCUSSIVE), true)
+            FmInstrumentMatchResult(FmInstrumentPreset(Pair(2,3), 8.0f, EnvelopeMode.PERCUSSIVE), true)
         }
 
         // 10. General Drums / Percussion / Trommer: c:m = 2:3, I = 1.5, freq = 150 Hz
