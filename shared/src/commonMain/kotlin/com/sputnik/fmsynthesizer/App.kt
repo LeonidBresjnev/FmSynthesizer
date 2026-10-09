@@ -20,12 +20,13 @@ import com.sputnik.fmsynthesizer.model.SynthesizerViewModel
 import com.sputnik.fmsynthesizer.ui.EnvelopeTab
 import com.sputnik.fmsynthesizer.ui.FmSettingsTab
 import com.sputnik.fmsynthesizer.ui.MusicLibraryTab
+import com.sputnik.fmsynthesizer.ui.ReverbTab
 import kotlinx.coroutines.launch
 
 @Composable
 fun App(viewModel: SynthesizerViewModel = remember { SynthesizerViewModel() }) {
     MaterialTheme {
-        val pagerState = rememberPagerState(pageCount = { 3 })
+        val pagerState = rememberPagerState(pageCount = { 4 })
         val coroutineScope = rememberCoroutineScope()
 
         Box(
@@ -54,6 +55,11 @@ fun App(viewModel: SynthesizerViewModel = remember { SynthesizerViewModel() }) {
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
                         text = { Text("Music Library") }
                     )
+                    Tab(
+                        selected = pagerState.currentPage == 3,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } },
+                        text = { Text("Reverb Filter") }
+                    )
                 }
 
                 HorizontalPager(
@@ -66,6 +72,7 @@ fun App(viewModel: SynthesizerViewModel = remember { SynthesizerViewModel() }) {
                         0 -> FmSettingsTab(viewModel = viewModel)
                         1 -> EnvelopeTab(viewModel = viewModel)
                         2 -> MusicLibraryTab(viewModel = viewModel)
+                        3 -> ReverbTab(viewModel = viewModel)
                     }
                 }
             }

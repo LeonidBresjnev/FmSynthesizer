@@ -342,6 +342,21 @@ actual class LoggingFmSynthesizer actual constructor(
         }
     }
 
+    actual override suspend fun setReverbEnabled(enabled: Boolean) {
+    }
+
+    actual override suspend fun setReverbBalance(balance: Float) {
+    }
+
+    actual override suspend fun setReverbR(r: Float) {
+    }
+
+    actual override suspend fun setReverbG(g: Float) {
+    }
+
+    actual override suspend fun setReverbD(d: Float) {
+    }
+
     actual fun delete() {
         for (v in voices) v.playnote = false
         try {

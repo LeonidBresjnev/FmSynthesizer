@@ -1,0 +1,6 @@
+Fetching remote song list...
+Found 3 remote songs:
+  Living On Video.musicxml -> downloadUrl=https://raw.githubusercontent.com/LeonidBresjnev/myMusic/main/Living%20On%20Video.musicxml, size=245000
+  Canon in D.musicxml -> downloadUrl=https://raw.githubusercontent.com/LeonidBresjnev/myMusic/main/Canon%20in%20D.musicxml, size=182000
+  Brahms Lullaby.musicxml -> downloadUrl=https://raw.githubusercontent.com/LeonidBresjnev/myMusic/main/Brahms%20Lullaby.musicxml, size=94000
+No remote MIDI song found in list.

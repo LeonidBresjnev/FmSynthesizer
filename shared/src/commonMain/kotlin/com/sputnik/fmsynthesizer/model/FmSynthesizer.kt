@@ -12,4 +12,11 @@ interface FmSynthesizer {
     // 2nd order FM parameters
     suspend fun setModulationIndex2(index: Float, instrumentIndex: Int = 0)
     suspend fun setCMRatio2(ratio: Pair<Int, Int>, instrumentIndex: Int = 0)
+
+    // Reverb Filter controls
+    suspend fun setReverbEnabled(enabled: Boolean)
+    suspend fun setReverbBalance(balance: Float)
+    suspend fun setReverbR(r: Float)
+    suspend fun setReverbG(g: Float)
+    suspend fun setReverbD(d: Float)
 }

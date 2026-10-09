@@ -208,6 +208,34 @@ class SynthesizerViewModel(
     private val _release = MutableStateFlow(0.3f)
     val release: StateFlow<Float> = _release.asStateFlow()
 
+    // Reverb Filter State
+    private val _isReverbEnabled = MutableStateFlow(false)
+    val isReverbEnabled: StateFlow<Boolean> = _isReverbEnabled.asStateFlow()
+
+    private val _reverbBalance = MutableStateFlow(0.0f)
+    val reverbBalance: StateFlow<Float> = _reverbBalance.asStateFlow()
+
+    private val _reverbR = MutableStateFlow(1.0f)
+    val reverbR: StateFlow<Float> = _reverbR.asStateFlow()
+
+    private val _reverbG = MutableStateFlow(1.0f)
+    val reverbG: StateFlow<Float> = _reverbG.asStateFlow()
+
+    private val _reverbD = MutableStateFlow(0.5f)
+    val reverbD: StateFlow<Float> = _reverbD.asStateFlow()
+
+    private val _selectedReverbPreset = MutableStateFlow(ReverbPreset.OFF)
+    val selectedReverbPreset: StateFlow<ReverbPreset> = _selectedReverbPreset.asStateFlow()
+
+    val reverbPresets = mapOf(
+        ReverbPreset.OFF to ReverbSettings(false, balance = 0.0f, r = 1.0f, g = 1.0f, d = 0.5f),
+        ReverbPreset.ROOM to ReverbSettings(true, balance = 0.5f, r = 0.4f, g = 0.5f, d = 0.5f),
+        ReverbPreset.CONCERT to ReverbSettings(true, balance = 0.75f, r = 0.6f, g = 0.6f, d = 0.5f),
+        ReverbPreset.HALL to ReverbSettings(true, balance = 0.85f, r = 0.85f, g = 0.75f, d = 0.5f),
+        ReverbPreset.ECHO_VALLEY to ReverbSettings(true, balance = 0.9f, r = 0.95f, g = 0.9f, d = 0.5f),
+        ReverbPreset.CUSTOM to null
+    )
+
     // Per-instrument parameters (50 instruments)
     private val _selectedInstrumentIndex = MutableStateFlow(0)
     //val selectedInstrumentIndex: StateFlow<Int> = _selectedInstrumentIndex.asStateFlow()
@@ -293,6 +321,70 @@ class SynthesizerViewModel(
     fun getInstrumentEnvelopeMode(index: Int): EnvelopeMode {
         val safeIdx = index.coerceIn(0, 49)
         return instrumentEnvelopeMode[safeIdx]
+    }
+
+    fun applyReverbPreset(preset: ReverbPreset) {
+        _selectedReverbPreset.value = preset
+        val settings = reverbPresets[preset]
+        if (settings != null) {
+            _isReverbEnabled.value = settings.enabled
+            _reverbBalance.value = settings.balance
+            _reverbR.value = settings.r
+            _reverbG.value = settings.g
+            _reverbD.value = settings.d
+            syncReverbWithSynthesizer()
+        } else if (preset == ReverbPreset.CUSTOM) {
+            _isReverbEnabled.value = true
+            syncReverbWithSynthesizer()
+        }
+    }
+
+    fun setReverbBalance(v: Float) {
+        if (_selectedReverbPreset.value != ReverbPreset.CUSTOM) _selectedReverbPreset.value = ReverbPreset.CUSTOM
+        _isReverbEnabled.value = true
+        _reverbBalance.value = v
+        syncReverbWithSynthesizer()
+    }
+
+    fun setReverbR(v: Float) {
+        if (_selectedReverbPreset.value != ReverbPreset.CUSTOM) _selectedReverbPreset.value = ReverbPreset.CUSTOM
+        _isReverbEnabled.value = true
+        _reverbR.value = v
+        syncReverbWithSynthesizer()
+    }
+
+    fun setReverbG(v: Float) {
+        if (_selectedReverbPreset.value != ReverbPreset.CUSTOM) _selectedReverbPreset.value = ReverbPreset.CUSTOM
+        _isReverbEnabled.value = true
+        _reverbG.value = v
+        syncReverbWithSynthesizer()
+    }
+
+    fun setReverbD(v: Float) {
+        if (_selectedReverbPreset.value != ReverbPreset.CUSTOM) _selectedReverbPreset.value = ReverbPreset.CUSTOM
+        _isReverbEnabled.value = true
+        _reverbD.value = v
+        syncReverbWithSynthesizer()
+    }
+
+    fun toggleReverbEnabled(enabled: Boolean) {
+        _isReverbEnabled.value = enabled
+        if (!enabled) {
+            _selectedReverbPreset.value = ReverbPreset.OFF
+        } else if (_selectedReverbPreset.value == ReverbPreset.OFF) {
+            _selectedReverbPreset.value = ReverbPreset.CUSTOM
+        }
+        syncReverbWithSynthesizer()
+    }
+
+    private fun syncReverbWithSynthesizer() {
+        viewModelScope.launch {
+            synthesizer.setReverbEnabled(_isReverbEnabled.value)
+            synthesizer.setReverbBalance(_reverbBalance.value)
+            synthesizer.setReverbR(_reverbR.value)
+            synthesizer.setReverbG(_reverbG.value)
+            synthesizer.setReverbD(_reverbD.value)
+        }
     }
 
     fun togglePlayStop() {

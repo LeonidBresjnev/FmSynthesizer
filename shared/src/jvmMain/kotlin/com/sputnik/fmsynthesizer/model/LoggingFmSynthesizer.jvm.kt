@@ -23,6 +23,12 @@ actual class LoggingFmSynthesizer actual constructor(
     private external fun setModulationIndex2(synthesizerHandle: Long, index: Float, instrumentIndex: Int)
     private external fun setCMRatio2(synthesizerHandle: Long, c: Int, m: Int, instrumentIndex: Int)
 
+    private external fun setReverbEnabled(synthesizerHandle: Long, enabled: Boolean)
+    private external fun setReverbBalance(synthesizerHandle: Long, balance: Float)
+    private external fun setReverbR(synthesizerHandle: Long, r: Float)
+    private external fun setReverbG(synthesizerHandle: Long, g: Float)
+    private external fun setReverbD(synthesizerHandle: Long, d: Float)
+
     companion object {
         init {
             loadNativeLibrary("fmsynthesizer_desktop")
@@ -109,6 +115,41 @@ actual class LoggingFmSynthesizer actual constructor(
         synchronized(synthesizerMutex) {
             createNativeHandleIfNotExists()
             setCMRatio2(synthesizerHandle, ratio.first, ratio.second, instrumentIndex)
+        }
+    }
+
+    actual override suspend fun setReverbEnabled(enabled: Boolean) = withContext(Dispatchers.Default) {
+        synchronized(synthesizerMutex) {
+            createNativeHandleIfNotExists()
+            setReverbEnabled(synthesizerHandle, enabled)
+        }
+    }
+
+    actual override suspend fun setReverbBalance(balance: Float) = withContext(Dispatchers.Default) {
+        synchronized(synthesizerMutex) {
+            createNativeHandleIfNotExists()
+            setReverbBalance(synthesizerHandle, balance)
+        }
+    }
+
+    actual override suspend fun setReverbR(r: Float) = withContext(Dispatchers.Default) {
+        synchronized(synthesizerMutex) {
+            createNativeHandleIfNotExists()
+            setReverbR(synthesizerHandle, r)
+        }
+    }
+
+    actual override suspend fun setReverbG(g: Float) = withContext(Dispatchers.Default) {
+        synchronized(synthesizerMutex) {
+            createNativeHandleIfNotExists()
+            setReverbG(synthesizerHandle, g)
+        }
+    }
+
+    actual override suspend fun setReverbD(d: Float) = withContext(Dispatchers.Default) {
+        synchronized(synthesizerMutex) {
+            createNativeHandleIfNotExists()
+            setReverbD(synthesizerHandle, d)
         }
     }
 
